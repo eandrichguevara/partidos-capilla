@@ -10,6 +10,12 @@ import { LeaderboardCard, useLeaderboard } from "@/features/leaderboard";
 import { TeamManagementCard, useTeamManagement } from "@/features/teams";
 import { SettingsCard, useSettings } from "@/features/settings";
 import { MatchHistoryCard, useMatchHistory } from "@/features/history";
+import {
+	TournamentResults,
+	ConfirmEndTournamentModal,
+	EndTournamentButton,
+	useTournament,
+} from "@/features/tournament";
 
 // Components
 import { InfoModal, InfoButton } from "@/components/InfoModal";
@@ -24,6 +30,7 @@ export default function HomePage() {
 	const teamManagement = useTeamManagement();
 	const settings = useSettings();
 	const history = useMatchHistory();
+	const tournament = useTournament();
 
 	// Estado global
 	const currentMatch = useGameStore((state) => state.currentMatch);
@@ -104,6 +111,14 @@ export default function HomePage() {
 			{/* Leaderboard */}
 			<LeaderboardCard leaderboard={leaderboard} />
 
+			{/* Tournament End Section */}
+			<div className="w-full mb-6 flex justify-center">
+				<EndTournamentButton
+					onClick={tournament.handleOpenResults}
+					disabled={!tournament.canFinish}
+				/>
+			</div>
+
 			<div className="text-xs text-gray-500">
 				<p>Creado, diseñado y desarrollado por Emilio Andrich.</p>
 			</div>
@@ -112,6 +127,51 @@ export default function HomePage() {
 			<InfoModal
 				isOpen={isInfoModalOpen}
 				onClose={() => setIsInfoModalOpen(false)}
+			/>
+
+			{/* Tournament Results Modal */}
+			{tournament.showResults && tournament.champion && (
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4"
+					onClick={tournament.handleCloseResults}
+				>
+					<div
+						className="relative max-w-2xl w-full"
+						onClick={(e) => e.stopPropagation()}
+					>
+						<TournamentResults
+							champion={tournament.champion}
+							podium={tournament.podium}
+						/>
+						<div className="mt-4 flex gap-3 justify-center">
+							<button
+								onClick={tournament.handleShare}
+								className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition flex items-center gap-2"
+							>
+								📱 Compartir en WhatsApp
+							</button>
+							<button
+								onClick={tournament.handleOpenConfirmModal}
+								className="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-lg transition"
+							>
+								🗑️ Reiniciar Torneo
+							</button>
+							<button
+								onClick={tournament.handleCloseResults}
+								className="bg-gray-700 hover:bg-gray-600 text-white font-semibold px-6 py-3 rounded-lg transition"
+							>
+								Cerrar
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Confirm End Tournament Modal */}
+			<ConfirmEndTournamentModal
+				isOpen={tournament.showConfirmModal}
+				onConfirm={tournament.handleFinishTournament}
+				onCancel={tournament.handleCloseConfirmModal}
 			/>
 		</div>
 	);

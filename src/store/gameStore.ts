@@ -49,6 +49,7 @@ interface GameState {
 		winsByGoal: number;
 		winsByTimeout: number;
 		losses: number;
+		gamesPlayed: number;
 	}[];
 	resetStore: () => Promise<void>;
 }
