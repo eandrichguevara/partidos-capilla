@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useGameStore, Team, MatchResult } from "@/store/gameStore";
+import {
+	useGameStore,
+	Team,
+	MatchResult,
+	useTournamentState,
+} from "@/store/gameStore";
 import Timer from "@/components/Timer";
 import {
 	FaPause,
@@ -140,7 +145,9 @@ export default function HomePage() {
 	const [editingMatchId, setEditingMatchId] = useState<number | null>(null);
 	const [editWinnerId, setEditWinnerId] = useState<number | null>(null);
 	const [editLoserId, setEditLoserId] = useState<number | null>(null);
-	const [editReason, setEditReason] = useState<"goal" | "timeout">("goal");
+	const [editReason, setEditReason] = useState<
+		"goal" | "timeout" | "tiebreaker"
+	>("goal");
 	const [isTeamsOpen, setIsTeamsOpen] = useState(false);
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 	const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -148,19 +155,18 @@ export default function HomePage() {
 	const [isPenaltyGuideOpen, setIsPenaltyGuideOpen] = useState(false);
 
 	const teams = useGameStore((state) => state.teams);
-	const queue = useGameStore((state) => state.queue);
-	const currentMatch = useGameStore((state) => state.currentMatch);
-	const defendingTeam = useGameStore((state) => state.defendingTeam);
 	const matchDuration = useGameStore((state) => state.matchDuration);
 	const matchHistory = useGameStore((state) => state.matchHistory);
 	const isTimerRunning = useGameStore((state) => state.isTimerRunning);
 	const timeLeft = useGameStore((state) => state.timeLeft);
 
+	// Use tournament state derivator for derived state
+	const { queue, currentMatch, defendingTeam } = useTournamentState();
+
 	const addTeam = useGameStore((state) => state.addTeam);
 	const editTeamName = useGameStore((state) => state.editTeamName);
 	const endMatch = useGameStore((state) => state.endMatch);
 	const setMatchDuration = useGameStore((state) => state.setMatchDuration);
-	const startNextMatch = useGameStore((state) => state.startNextMatch);
 	const startTimer = useGameStore((state) => state.startTimer);
 	const pauseTimer = useGameStore((state) => state.pauseTimer);
 	const resetTimer = useGameStore((state) => state.resetTimer);
@@ -280,8 +286,8 @@ export default function HomePage() {
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [isInfoModalOpen]);
 
-	const formatReason = (reason: "goal" | "timeout") =>
-		reason === "goal" ? "Gol" : "Timeout";
+	const formatReason = (reason: "goal" | "timeout" | "tiebreaker") =>
+		reason === "goal" ? "Gol" : reason === "timeout" ? "Timeout" : "Desempate";
 
 	const handleAddTeam = () => {
 		if (teamName.trim()) {
@@ -340,15 +346,6 @@ export default function HomePage() {
 				};
 		}
 	};
-
-	useEffect(() => {
-		if (
-			!currentMatch &&
-			(queue.length >= 2 || (defendingTeam && queue.length >= 1))
-		) {
-			startNextMatch();
-		}
-	}, [currentMatch, defendingTeam, queue, startNextMatch]);
 
 	return (
 		<div className="bg-gray-900 text-white min-h-screen flex flex-col items-center p-4 font-sans w-full max-w-md mx-auto">
