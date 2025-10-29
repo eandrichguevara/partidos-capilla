@@ -11,26 +11,35 @@ class EmbeddingPipeline {
 
 	static async getInstance() {
 		if (this.instance === null) {
-			// Importa la biblioteca dinámicamente
-			const { pipeline } = await import("@xenova/transformers");
+			// Importa la biblioteca dinámicamente.
+			// Puede fallar en entornos serverless (Vercel) si faltan librerías nativas.
+			try {
+				const { pipeline } = await import("@xenova/transformers");
 
-			// Carga el modelo. Esto puede tardar unos segundos la PRIMERA VEZ
-			// que se inicia el servidor. Las siguientes veces será instantáneo.
-			// 'Xenova/all-MiniLM-L6-v2' es un modelo excelente, pequeño y rápido
-			// para similitud de texto.
-			console.log("Cargando modelo de embeddings por primera vez...");
-			this.instance = await pipeline(
-				"feature-extraction",
-				"Xenova/all-MiniLM-L6-v2",
-				{
-					quantized: true, // Usa una versión más pequeña y rápida
-				}
-			);
-			console.log("Modelo de embeddings cargado exitosamente.");
+				console.log("Cargando modelo de embeddings por primera vez...");
+				this.instance = await pipeline(
+					"feature-extraction",
+					"Xenova/all-MiniLM-L6-v2",
+					{
+						quantized: true, // Usa una versión más pequeña y rápida
+					}
+				);
+				console.log("Modelo de embeddings cargado exitosamente.");
+			} catch (err) {
+				// Si la importación o carga falla (ej: falta libonnxruntime en Vercel),
+				// marcamos que no hay embeddings disponibles y devolvemos null.
+				console.error("No fue posible cargar @xenova/transformers:", err);
+				this.instance = null;
+				// Lanzamos para que el llamador sepa que hubo un problema y pueda usar fallback
+				throw err;
+			}
 		}
 		return this.instance;
 	}
 }
+
+// Flag global que indica si el servicio de embeddings está disponible
+let embeddingsAvailable = true;
 
 // --- TIPO DE LOGO EN LA BASE DE DATOS ---
 type LogoData = {
@@ -464,21 +473,103 @@ async function getLogoVectors(): Promise<LogoVector[]> {
 	}
 
 	console.log("Generando vectores de logos por primera vez...");
-	const embedder = await EmbeddingPipeline.getInstance();
 	const newLogoVectors: LogoVector[] = [];
-
-	for (const logo of logoDatabase) {
-		const vector = await getEmbedding(logo.keywords, embedder);
-		newLogoVectors.push({
+	try {
+		const embedder = await EmbeddingPipeline.getInstance();
+		for (const logo of logoDatabase) {
+			const vector = await getEmbedding(logo.keywords, embedder);
+			newLogoVectors.push({
+				id: logo.id,
+				path: logo.path,
+				vector: vector,
+			});
+		}
+		cachedLogoVectors = newLogoVectors;
+		console.log("Vectores de logos cacheados.");
+		return cachedLogoVectors;
+	} catch (err) {
+		// Si falla la creación de embeddings (ej: entorno sin libonnxruntime),
+		// activamos el fallback: no usamos embeddings pero seguimos funcionando.
+		embeddingsAvailable = false;
+		console.warn(
+			"Embeddings no disponibles, usando fallback de keywords:",
+			err
+		);
+		// Creamos vectores vacíos para mantener la compatibilidad de tipos
+		cachedLogoVectors = logoDatabase.map((logo) => ({
 			id: logo.id,
 			path: logo.path,
-			vector: vector,
-		});
+			vector: [],
+		}));
+		return cachedLogoVectors;
+	}
+}
+
+/**
+ * Fallback simple basado en keywords: cuenta coincidencias de tokens.
+ */
+function simpleKeywordMatch(teamName: string) {
+	const teamTokens = teamName
+		.toLowerCase()
+		.split(/[^\p{L}\d]+/u)
+		.filter((t) => t.length > 0);
+
+	let best = { id: "", path: "", score: -Infinity };
+
+	for (const logo of logoDatabase) {
+		const logoData = logo;
+
+		// Exclusiones
+		if (logoData.exclusions) {
+			const exclusionWords = logoData.exclusions
+				.toLowerCase()
+				.split(",")
+				.map((w) => w.trim())
+				.filter((w) => w.length > 0);
+
+			if (exclusionWords.some((w) => teamName.includes(w))) {
+				continue;
+			}
+		}
+
+		const keywords = logoData.keywords
+			.toLowerCase()
+			.split(/[^\p{L}\d]+/u)
+			.map((k) => k.trim())
+			.filter((k) => k.length > 0);
+
+		let matchCount = 0;
+		for (const tk of teamTokens) {
+			if (keywords.includes(tk)) matchCount++;
+		}
+
+		// Penaliza por negativeKeywords
+		let penalty = 0;
+		if (logoData.negativeKeywords) {
+			const negativeWords = logoData.negativeKeywords
+				.toLowerCase()
+				.split(",")
+				.map((w) => w.trim())
+				.filter((w) => w.length > 0);
+			for (const nw of negativeWords) {
+				if (teamName.includes(nw)) penalty += 1;
+			}
+		}
+
+		// Score simple: coincidencias - penalizaciones (ajustable)
+		const score = matchCount - penalty * 0.5;
+
+		if (score > best.score) {
+			best = { id: logoData.id, path: logoData.path, score };
+		}
 	}
 
-	cachedLogoVectors = newLogoVectors;
-	console.log("Vectores de logos cacheados.");
-	return cachedLogoVectors;
+	// Si no hubo match, devolvemos el primer logo por defecto
+	if (best.id === "" && logoDatabase.length > 0) {
+		return { id: logoDatabase[0].id, path: logoDatabase[0].path, score: 0 };
+	}
+
+	return best;
 }
 
 // --- FUNCIÓN DE SIMILITUD ---
@@ -500,16 +591,26 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 // --- HANDLER GET PARA PRECARGA ---
 export async function GET() {
 	try {
-		// Solo inicializa el pipeline y los vectores
+		// Intenta inicializar el pipeline y los vectores
 		await getLogoVectors();
-		await EmbeddingPipeline.getInstance();
+		try {
+			await EmbeddingPipeline.getInstance();
+		} catch (err) {
+			// No consideramos esto fatal: activamos fallback
+			embeddingsAvailable = false;
+			console.warn("Embeddings no disponibles en GET:", err);
+		}
 
 		return NextResponse.json({
-			message: "Modelos precargados exitosamente",
+			message: embeddingsAvailable
+				? "Modelos precargados exitosamente"
+				: "Embeddings no disponibles, usando fallback de keywords",
+			embeddingsAvailable,
 			totalLogos: logoDatabase.length,
 		});
 	} catch (error) {
 		console.error("Error al precargar modelos:", error);
+		// Si algo crítico falla, devolvemos 500
 		return NextResponse.json(
 			{
 				message: "Error al precargar modelos",
@@ -536,75 +637,79 @@ export async function POST(request: NextRequest) {
 		const teamNameLower = teamName.toLowerCase();
 
 		// 1. Asegúrate de que los vectores de los logos estén listos
-		const logoVectors = await getLogoVectors();
+		await getLogoVectors();
 
-		// 2. Obtén la instancia del modelo
-		const embedder = await EmbeddingPipeline.getInstance();
-
-		// 3. Genera el vector para el nombre del equipo ingresado
-		const inputVector = await getEmbedding(teamName, embedder);
-
-		// 4. Compara el vector de entrada con todos los vectores de los logos
-		let bestMatch = {
-			id: "",
-			path: "",
-			score: -Infinity, // Empezamos con el peor puntaje posible
-		};
-
-		for (const logo of logoVectors) {
-			// Buscar el logo original en logoDatabase para obtener exclusions y negativeKeywords
-			const logoData = logoDatabase.find((l) => l.id === logo.id);
-
-			// EXCLUSIONES: Si el nombre contiene alguna palabra de exclusión, salta este logo
-			if (logoData?.exclusions) {
-				const exclusionWords = logoData.exclusions
-					.toLowerCase()
-					.split(",")
-					.map((w) => w.trim())
-					.filter((w) => w.length > 0);
-
-				const hasExclusion = exclusionWords.some((word) =>
-					teamNameLower.includes(word)
-				);
-
-				if (hasExclusion) {
-					continue; // Salta este logo completamente
-				}
-			}
-
-			// Calcula la similitud base
-			let score = cosineSimilarity(inputVector, logo.vector);
-
-			// KEYWORDS NEGATIVAS: Reduce el score si el nombre contiene palabras negativas
-			if (logoData?.negativeKeywords) {
-				const negativeWords = logoData.negativeKeywords
-					.toLowerCase()
-					.split(",")
-					.map((w) => w.trim())
-					.filter((w) => w.length > 0);
-
-				const matchedNegatives = negativeWords.filter((word) =>
-					teamNameLower.includes(word)
-				);
-
-				// Aplica una penalización por cada keyword negativa encontrada
-				// Reducción de 0.3 por cada coincidencia (ajustable)
-				if (matchedNegatives.length > 0) {
-					score = score - matchedNegatives.length * 0.3;
-				}
-			}
-
-			if (score > bestMatch.score) {
-				bestMatch = {
-					id: logo.id,
-					path: logo.path,
-					score: score,
-				};
-			}
+		// Si los embeddings no están disponibles, usamos el fallback por keywords
+		if (!embeddingsAvailable) {
+			const result = simpleKeywordMatch(teamNameLower);
+			return NextResponse.json(result);
 		}
 
-		// 5. Devuelve el mejor resultado
-		return NextResponse.json(bestMatch);
+		// Si llegamos acá, intentamos usar el embedder. Si falla por alguna razón,
+		// caemos al fallback de keywords.
+		try {
+			const logoVectors = cachedLogoVectors;
+			const embedder = await EmbeddingPipeline.getInstance();
+			const inputVector = await getEmbedding(teamName, embedder);
+
+			let bestMatch = {
+				id: "",
+				path: "",
+				score: -Infinity,
+			};
+
+			for (const logo of logoVectors) {
+				const logoData = logoDatabase.find((l) => l.id === logo.id);
+
+				if (logoData?.exclusions) {
+					const exclusionWords = logoData.exclusions
+						.toLowerCase()
+						.split(",")
+						.map((w) => w.trim())
+						.filter((w) => w.length > 0);
+
+					const hasExclusion = exclusionWords.some((word) =>
+						teamNameLower.includes(word)
+					);
+
+					if (hasExclusion) continue;
+				}
+
+				let score = 0;
+				if (logo.vector.length > 0) {
+					score = cosineSimilarity(inputVector, logo.vector);
+				}
+
+				if (logoData?.negativeKeywords) {
+					const negativeWords = logoData.negativeKeywords
+						.toLowerCase()
+						.split(",")
+						.map((w) => w.trim())
+						.filter((w) => w.length > 0);
+
+					const matchedNegatives = negativeWords.filter((word) =>
+						teamNameLower.includes(word)
+					);
+
+					if (matchedNegatives.length > 0) {
+						score = score - matchedNegatives.length * 0.3;
+					}
+				}
+
+				if (score > bestMatch.score) {
+					bestMatch = { id: logo.id, path: logo.path, score };
+				}
+			}
+
+			return NextResponse.json(bestMatch);
+		} catch (err) {
+			console.warn(
+				"Fallo al usar embeddings en POST, aplicando fallback:",
+				err
+			);
+			const result = simpleKeywordMatch(teamNameLower);
+			return NextResponse.json(result);
+		}
 	} catch (error) {
 		console.error("Error al procesar la búsqueda semántica:", error);
 		return NextResponse.json(
