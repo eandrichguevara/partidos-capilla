@@ -73,6 +73,11 @@ export const useTeamManagement = () => {
 		}
 	};
 
+	const handleCancelEditTeam = () => {
+		setEditingTeam(null);
+		setNewTeamName("");
+	};
+
 	return {
 		teams,
 		teamName,
@@ -85,5 +90,6 @@ export const useTeamManagement = () => {
 		handleSaveTeamName,
 		handleDeleteTeam,
 		isAssigningLogo,
+		handleCancelEditTeam,
 	};
 };

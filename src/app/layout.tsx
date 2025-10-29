@@ -1,6 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
+import {
+	Geist,
+	Geist_Mono,
+	Bebas_Neue,
+	Teko,
+	Oswald,
+	Anton,
+	Saira_Condensed,
+	Rajdhani,
+	Russo_One,
+	Archivo_Black,
+	Staatliches,
+	Exo_2,
+	Barlow_Condensed,
+	Kanit,
+} from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,6 +26,45 @@ const geistMono = Geist_Mono({
 	variable: "--font-geist-mono",
 	subsets: ["latin"],
 });
+
+// Team fonts loaded via next/font/google so they are served same-origin
+// (prevents cross-origin cssRules access errors when inlining fonts for SVG/PNG)
+const bebas = Bebas_Neue({
+	weight: "400",
+	subsets: ["latin"],
+	display: "swap",
+});
+const teko = Teko({ weight: "600", subsets: ["latin"], display: "swap" });
+const oswald = Oswald({ weight: "600", subsets: ["latin"], display: "swap" });
+const anton = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
+const saira = Saira_Condensed({
+	weight: "700",
+	subsets: ["latin"],
+	display: "swap",
+});
+const rajdhani = Rajdhani({
+	weight: "700",
+	subsets: ["latin"],
+	display: "swap",
+});
+const russo = Russo_One({ weight: "400", subsets: ["latin"], display: "swap" });
+const archivoBlack = Archivo_Black({
+	weight: "400",
+	subsets: ["latin"],
+	display: "swap",
+});
+const staatliches = Staatliches({
+	weight: "400",
+	subsets: ["latin"],
+	display: "swap",
+});
+const exo2 = Exo_2({ weight: "800", subsets: ["latin"], display: "swap" });
+const barlowCondensed = Barlow_Condensed({
+	weight: "700",
+	subsets: ["latin"],
+	display: "swap",
+});
+const kanit = Kanit({ weight: "700", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
 	title: "Gol y te Quedas - Sistema de Gestión de Partidos",
@@ -83,20 +136,13 @@ export default function RootLayout({
 				/>
 			</head>
 			<body
-				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+				className={`
+					${geistSans.variable} ${geistMono.variable} 
+					${bebas.className} ${teko.className} ${oswald.className} ${anton.className} ${saira.className} ${rajdhani.className} ${russo.className} ${archivoBlack.className} ${staatliches.className} ${exo2.className} ${barlowCondensed.className} ${kanit.className} 
+					antialiased
+				`}
 			>
 				{children}
-				{/* Script para cargar las fuentes dinámicamente */}
-				<Script id="load-team-fonts" strategy="beforeInteractive">
-					{`
-						(function() {
-							const link = document.createElement('link');
-							link.rel = 'stylesheet';
-							link.href = 'https://fonts.googleapis.com/css2?family=Bebas+Neue:wght@400&family=Teko:wght@600&family=Oswald:wght@600&family=Anton:wght@400&family=Saira+Condensed:wght@700&family=Rajdhani:wght@700&family=Russo+One:wght@400&family=Archivo+Black:wght@400&family=Staatliches:wght@400&family=Exo+2:wght@800&family=Barlow+Condensed:wght@700&family=Kanit:wght@700&display=swap';
-							document.head.appendChild(link);
-						})();
-					`}
-				</Script>
 			</body>
 		</html>
 	);

@@ -78,6 +78,7 @@ export default function HomePage() {
 				onSaveTeamName={teamManagement.handleSaveTeamName}
 				onDeleteTeam={teamManagement.handleDeleteTeam}
 				isAssigningLogo={teamManagement.isAssigningLogo}
+				onCancelEditTeam={teamManagement.handleCancelEditTeam}
 			/>
 
 			{/* Settings */}
@@ -139,8 +140,9 @@ export default function HomePage() {
 						<TournamentResults
 							champion={tournament.champion}
 							podium={tournament.podium}
+							totalMatches={history.orderedHistory.length}
 						/>
-						<div className="mt-4 flex flex-col gap-2 w-full">
+						<div className="mt-4 px-8 flex flex-col gap-3 w-full">
 							<button
 								onClick={tournament.handleShare}
 								className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"

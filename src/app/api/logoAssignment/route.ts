@@ -47,6 +47,24 @@ type LogoData = {
 // Exclusiones: si el nombre contiene estas palabras, el logo NO se considerará
 const logoDatabase: LogoData[] = [
 	{
+		id: "franja_azul_cielo",
+		path: "/escudos/franja, azul cielo, direccion, flecha.png",
+		keywords:
+			"franja, azul cielo, dirección, flecha, señal, movimiento, banda, celeste, orientación, camino",
+	},
+	{
+		id: "bota_de_oro",
+		path: "/escudos/bota de oro, zapatilla, zapato, goleador, pichichi.png",
+		keywords:
+			"bota de oro, zapatilla, zapato, goleador, pichichi, premio, fútbol, máximo goleador, trofeo, dorado",
+	},
+	{
+		id: "sol_puesta_albiceleste",
+		path: "/escudos/sol, puesta, horizonte, albiceleste, amanecer.png",
+		keywords:
+			"sol, puesta, horizonte, albiceleste, amanecer, atardecer, cielo, luz, azul, blanco, argentina, día, nuevo comienzo",
+	},
+	{
 		id: "atletico_azul_celeste",
 		path: "/escudos/A, atletico, azul celeste.png",
 		keywords: "atlético, azul, celeste, letra A, deporte, cielo, agua",
@@ -74,6 +92,7 @@ const logoDatabase: LogoData[] = [
 		id: "anillo_santos",
 		path: "/escudos/anillo, santos.png",
 		keywords: "anillo, santos, círculo, sagrado, reliquia, poder",
+		negativeKeywords: "misioneros, mormones, moroni",
 	},
 	{
 		id: "anillos_enredado",
@@ -223,6 +242,7 @@ const logoDatabase: LogoData[] = [
 		id: "halcon_metal",
 		path: "/escudos/halcon, metal, libertad.png",
 		keywords: "halcón, metal, libertad, ave, vuelo, velocidad, cazador",
+		exclusions: "albiceleste",
 	},
 	{
 		id: "hamburguesa",

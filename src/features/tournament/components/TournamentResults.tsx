@@ -3,6 +3,41 @@
 import { FaTrophy, FaMedal, FaAward, FaFutbol, FaClock } from "react-icons/fa";
 import type { LeaderboardEntry } from "@/domain/types";
 import Image from "next/image";
+import { getFontById } from "@/domain/fonts";
+
+// Copiado de CurrentMatchCard
+const getDynamicFontSize = (
+	name: string,
+	fontFamily?: string,
+	small?: boolean
+): { fontSize: string; width: string; display: string } => {
+	const length = name.length;
+	const condensedFonts = [
+		"Bebas Neue",
+		"Teko",
+		"Oswald",
+		"Saira Condensed",
+		"Barlow Condensed",
+		"Staatliches",
+	];
+	let charWidthRatio = 0.6;
+	if (fontFamily) {
+		const isCondensed = condensedFonts.some((font) =>
+			fontFamily.includes(font)
+		);
+		charWidthRatio = isCondensed ? 0.5 : 0.65;
+	}
+	const targetWidth = small ? 200 : 160;
+	const calculatedSize = targetWidth / (length * charWidthRatio);
+	const minSize = 16;
+	const maxSize = 64;
+	const finalSize = Math.max(minSize, Math.min(maxSize, calculatedSize));
+	return {
+		fontSize: `${small ? finalSize * 0.7 : finalSize}px`,
+		width: `${targetWidth}px`,
+		display: "inline-block",
+	};
+};
 
 interface TournamentResultsProps {
 	champion: LeaderboardEntry;
@@ -30,7 +65,7 @@ export const TournamentResults = ({
 	return (
 		<div
 			id="tournament-results"
-			className="relative w-full max-w-2xl mx-auto overflow-y-auto"
+			className="relative w-full max-w-2xl mx-auto"
 			style={{
 				background:
 					"linear-gradient(180deg, #0a0e27 0%, #1a1f3a 50%, #0f1729 100%)",
@@ -53,24 +88,30 @@ export const TournamentResults = ({
 			</div>
 
 			{/* Content */}
-			<div className="relative z-10 p-6">
+			<div className="relative z-10 p-6 pl-2 overflow-hidden">
 				{/* Header with Trophy Icon */}
 				<div className="text-center mb-4 relative">
 					<div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-3">
 						<div
-							className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/50"
+							className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/50 p-1"
 							style={{
 								background:
 									"linear-gradient(to bottom right, #facc15, #eab308, #ca8a04)",
 								border: "3px solid #fbbf24",
 							}}
 						>
-							<FaTrophy className="text-2xl text-yellow-900" />
+							<Image
+								src="/favicon.svg"
+								alt="Trophy"
+								width={64}
+								height={64}
+								className="w-full h-full"
+							/>
 						</div>
 					</div>
 					<div className="pt-10">
 						<div
-							className="inline-block px-4 py-1 mb-2"
+							className="inline-block px-4 py-1 mt-2 mb-2"
 							style={{
 								background:
 									"linear-gradient(90deg, #1e40af 0%, #3b82f6 50%, #1e40af 100%)",
@@ -97,9 +138,9 @@ export const TournamentResults = ({
 					</div>
 				</div>
 
-				{/* Champion Card - Madden Style */}
-				<div className="mb-4 relative">
-					{/* Champion Banner */}
+				{/* Champion Card - estilo podio */}
+				<div className="mb-4 relative pl-2">
+					{/* Banner de campeón */}
 					<div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-20">
 						<div
 							className="px-6 py-1"
@@ -118,7 +159,7 @@ export const TournamentResults = ({
 					</div>
 
 					<div
-						className="pt-3 p-5"
+						className="p-8 pl-40 relative flex items-center gap-4"
 						style={{
 							background:
 								"linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1e3a8a 100%)",
@@ -128,111 +169,80 @@ export const TournamentResults = ({
 								"0 8px 24px rgba(251, 191, 36, 0.4), inset 0 2px 8px rgba(255, 255, 255, 0.1)",
 						}}
 					>
-						<div className="flex items-center justify-center gap-6 mb-4">
-							{/* Logo único centrado */}
-							<div className="shrink-0">
-								{champion.team.logo ? (
-									<div
-										className="relative w-24 h-24 rounded-full overflow-hidden"
-										style={{
-											border: "4px solid #fbbf24",
-											boxShadow: "0 0 20px rgba(251, 191, 36, 0.6)",
-											background: "#ffffff",
-										}}
-									>
-										<Image
-											src={champion.team.logo}
-											alt={champion.team.name}
-											fill
-											className="object-contain p-2"
-										/>
-									</div>
-								) : (
-									<div
-										className="w-24 h-24 rounded-full flex items-center justify-center"
-										style={{
-											backgroundColor: champion.team.color,
-											border: "4px solid #fbbf24",
-											boxShadow: "0 0 20px rgba(251, 191, 36, 0.6)",
-										}}
-									>
-										<FaTrophy className="text-4xl text-white opacity-50" />
-									</div>
-								)}
-							</div>
-
-							{/* Info */}
-							<div className="flex-1 text-left">
-								<h3
-									className="text-3xl font-black text-white mb-3"
+						{/* Logo sobresaliendo de la tarjeta */}
+						<div
+							className="absolute -left-6 top-1/2 transform -translate-y-1/2 shrink-0"
+							style={{ zIndex: 10 }}
+						>
+							{champion.team.logo ? (
+								<div
+									className="relative w-44 h-44"
 									style={{
+										filter: "drop-shadow(0 0 30px rgba(251, 191, 36, 0.9))",
+									}}
+								>
+									<Image
+										src={champion.team.logo}
+										alt={champion.team.name}
+										fill
+										className="object-contain"
+									/>
+								</div>
+							) : (
+								<div
+									className="w-44 h-44 rounded-full flex items-center justify-center"
+									style={{
+										backgroundColor: champion.team.color,
+										boxShadow: "0 0 30px rgba(251, 191, 36, 0.9)",
+									}}
+								>
+									<FaTrophy className="text-7xl text-white opacity-50" />
+								</div>
+							)}
+						</div>
+
+						{/* Info principal */}
+						<div className="flex-1 min-w-0 flex flex-col gap-2 justify-center">
+							<div className="flex items-center gap-3 mb-1">
+								<FaTrophy className="text-2xl text-yellow-400" />
+								<h3
+									className="font-black"
+									style={{
+										...getDynamicFontSize(
+											champion.team.name,
+											champion.team.font
+												? getFontById(champion.team.font)?.fontFamily
+												: undefined
+										),
+										color: "#fff",
 										textShadow:
 											"0 0 15px rgba(251, 191, 36, 0.8), 0 4px 8px rgba(0, 0, 0, 0.8)",
-										letterSpacing: "0.5px",
+										WebkitTextStroke: "1px rgba(0,0,0,0.5)",
+										fontFamily: champion.team.font
+											? getFontById(champion.team.font)?.fontFamily
+											: undefined,
+										textAlign: "left",
 									}}
 								>
 									{champion.team.name}
 								</h3>
-
-								{/* Stats Grid */}
-								<div className="grid grid-cols-3 gap-2">
-									<div
-										className="px-2 py-1 rounded-lg text-center"
-										style={{
-											background: "rgba(251, 191, 36, 0.15)",
-											border: "2px solid rgba(251, 191, 36, 0.3)",
-										}}
-									>
-										<p
-											className="text-2xl font-black text-yellow-400 leading-tight"
-											style={{
-												textShadow: "0 0 10px rgba(251, 191, 36, 0.8)",
-											}}
-										>
-											{champion.points}
-										</p>
-										<p className="text-xs font-bold text-yellow-200 uppercase tracking-wide">
-											Pts
-										</p>
-									</div>
-									<div
-										className="px-2 py-1 rounded-lg text-center"
-										style={{
-											background: "rgba(251, 191, 36, 0.15)",
-											border: "2px solid rgba(251, 191, 36, 0.3)",
-										}}
-									>
-										<p
-											className="text-2xl font-black text-yellow-400 leading-tight"
-											style={{
-												textShadow: "0 0 10px rgba(251, 191, 36, 0.8)",
-											}}
-										>
-											{champion.winsByGoal}
-										</p>
-										<p className="text-xs font-bold text-yellow-200 uppercase tracking-wide">
-											Gol
-										</p>
-									</div>
-									<div
-										className="px-2 py-1 rounded-lg text-center"
-										style={{
-											background: "rgba(251, 191, 36, 0.15)",
-											border: "2px solid rgba(251, 191, 36, 0.3)",
-										}}
-									>
-										<p
-											className="text-2xl font-black text-yellow-400 leading-tight"
-											style={{
-												textShadow: "0 0 10px rgba(251, 191, 36, 0.8)",
-											}}
-										>
-											{champion.gamesPlayed}
-										</p>
-										<p className="text-xs font-bold text-yellow-200 uppercase tracking-wide">
-											PJ
-										</p>
-									</div>
+							</div>
+							<div className="flex gap-4 text-base mt-1">
+								<div className="flex items-center gap-1 bg-yellow-900/30 rounded px-3 py-1">
+									<span className="font-extrabold text-yellow-300 text-3xl">
+										{champion.points}
+									</span>
+									<span className="text-yellow-200 uppercase font-bold text-base">
+										Pts
+									</span>
+								</div>
+								<div className="flex items-center gap-1 bg-yellow-900/30 rounded px-3 py-1">
+									<span className="font-extrabold text-yellow-300 text-3xl">
+										{champion.winsByGoal}
+									</span>
+									<span className="text-yellow-200 uppercase font-bold text-base">
+										Goles
+									</span>
 								</div>
 							</div>
 						</div>
@@ -241,7 +251,7 @@ export const TournamentResults = ({
 
 				{/* Podium - Madden Style */}
 				{podium.length > 1 && (
-					<div className="space-y-2 mb-4">
+					<div className="space-y-2 mb-4 pl-2">
 						{podium.slice(1).map((entry, index) => {
 							const position = index + 2;
 							const bgGradient =
@@ -252,11 +262,15 @@ export const TournamentResults = ({
 							const textColor =
 								position === 2 ? "text-gray-100" : "text-amber-100";
 							const Icon = position === 2 ? FaMedal : FaAward;
+							const shadowColor =
+								position === 2
+									? "rgba(156, 163, 175, 0.8)"
+									: "rgba(217, 119, 6, 0.8)";
 
 							return (
 								<div
 									key={entry.team.id}
-									className="p-3 relative"
+									className="p-3 pl-26 relative flex flex-col justify-center gap-2"
 									style={{
 										background: bgGradient,
 										borderRadius: "12px",
@@ -266,81 +280,63 @@ export const TournamentResults = ({
 												? "rgba(156, 163, 175, 0.3)"
 												: "rgba(217, 119, 6, 0.3)"
 										}`,
+										minHeight: "80px",
+										maxHeight: "80px",
+										overflow: "hidden",
 									}}
 								>
-									{/* Position Badge */}
-									<div className="absolute -top-2 left-3">
-										<div
-											className="w-8 h-8 rounded-full flex items-center justify-center"
-											style={{
-												background:
-													position === 2
-														? "linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%)"
-														: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-												border: `2px solid ${borderColor}`,
-												boxShadow: `0 2px 6px ${
-													position === 2
-														? "rgba(156, 163, 175, 0.5)"
-														: "rgba(217, 119, 6, 0.5)"
-												}`,
-											}}
-										>
-											<span
-												className="text-sm font-black"
+									{/* Logo sobresaliendo de la tarjeta */}
+									<div
+										className="absolute -left-3 -bottom-10 transform -translate-y-1/2"
+										style={{ zIndex: 10 }}
+									>
+										{entry.team.logo ? (
+											<div
+												className="relative w-20 h-20"
 												style={{
-													color: position === 2 ? "#1f2937" : "#451a03",
+													filter: `drop-shadow(0 0 20px ${shadowColor})`,
 												}}
 											>
-												{position}°
-											</span>
-										</div>
+												<Image
+													src={entry.team.logo}
+													alt={entry.team.name}
+													fill
+													className="object-contain"
+												/>
+											</div>
+										) : (
+											<div
+												className="w-20 h-20 rounded-full"
+												style={{
+													backgroundColor: entry.team.color,
+													boxShadow: `0 0 20px ${shadowColor}`,
+												}}
+											/>
+										)}
 									</div>
 
-									<div className="flex items-center justify-between pl-8">
+									<div className="flex items-center justify-between">
 										<div className="flex items-center gap-3 flex-1">
 											<Icon className={`text-xl ${textColor}`} />
 
-											{/* Team Logo */}
-											{entry.team.logo ? (
-												<div
-													className="relative w-12 h-12 rounded-full overflow-hidden"
-													style={{
-														border: `2px solid ${borderColor}`,
-														background: "#ffffff",
-														boxShadow: `0 0 10px ${
-															position === 2
-																? "rgba(156, 163, 175, 0.4)"
-																: "rgba(217, 119, 6, 0.4)"
-														}`,
-													}}
-												>
-													<Image
-														src={entry.team.logo}
-														alt={entry.team.name}
-														fill
-														className="object-contain p-1"
-													/>
-												</div>
-											) : (
-												<div
-													className="w-12 h-12 rounded-full"
-													style={{
-														backgroundColor: entry.team.color,
-														border: `2px solid ${borderColor}`,
-														boxShadow: `0 0 10px ${
-															position === 2
-																? "rgba(156, 163, 175, 0.4)"
-																: "rgba(217, 119, 6, 0.4)"
-														}`,
-													}}
-												/>
-											)}
-
 											<div className="flex-1 min-w-0">
 												<h4
-													className={`text-lg font-black ${textColor} truncate`}
+													className={`font-black ${textColor} truncate`}
 													style={{
+														...getDynamicFontSize(
+															entry.team.name,
+															entry.team.font
+																? getFontById(entry.team.font)?.fontFamily
+																: undefined,
+															true
+														),
+														color: "#fff",
 														textShadow: "0 2px 4px rgba(0, 0, 0, 0.5)",
+														WebkitTextStroke: "1px rgba(0,0,0,0.5)",
+														fontFamily: entry.team.font
+															? getFontById(entry.team.font)?.fontFamily
+															: undefined,
+														textAlign: "left",
 													}}
 												>
 													{entry.team.name}

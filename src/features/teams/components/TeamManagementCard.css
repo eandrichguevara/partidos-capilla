@@ -1,0 +1,21 @@
+@keyframes dice-spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	30% {
+		transform: rotate(720deg);
+	}
+	100% {
+		transform: rotate(1440deg);
+	}
+}
+
+.dice-icon {
+	display: inline-block;
+}
+
+.dice-spin {
+	display: inline-block;
+	animation: dice-spin 600ms ease-out;
+	transform-origin: center center;
+}

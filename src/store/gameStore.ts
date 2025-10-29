@@ -8,7 +8,7 @@ import { getRandomFont } from "@/domain/fonts";
 
 export type { Team, MatchResult } from "@/domain/types";
 
-const DEFAULT_MATCH_DURATION = 5;
+const DEFAULT_MATCH_DURATION = 4;
 
 const createInitialDataState = () => ({
 	teams: [] as Team[],
