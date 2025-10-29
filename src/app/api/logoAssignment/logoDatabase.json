@@ -153,7 +153,8 @@
 	{
 		"id": "escudo_dorado",
 		"path": "/escudos/escudo, proteccion, dorado, brillo.png",
-		"keywords": "escudo, protección, dorado, brillo, defensa, oro, seguridad"
+		"keywords": "escudo, protección, dorado, brillo, defensa, oro, seguridad",
+		"negativeKeywords": "soles"
 	},
 	{
 		"id": "estrella_fugaz",
@@ -164,7 +165,8 @@
 	{
 		"id": "fantasma",
 		"path": "/escudos/fantasma.png",
-		"keywords": "fantasma, espectro, espíritu, blanco, invisible, misterioso"
+		"keywords": "fantasma, espectro, espíritu, blanco, invisible, misterioso",
+		"negativeKeywords": "soles, dorados"
 	},
 	{
 		"id": "fenix_fuego",
@@ -210,7 +212,8 @@
 	{
 		"id": "leon_amarillo",
 		"path": "/escudos/leon, amarillo.png",
-		"keywords": "león, amarillo, rey, felino, salvaje, melena, valentía, fuerza"
+		"keywords": "león, amarillo, rey, felino, salvaje, melena, valentía, fuerza",
+		"negativeKeywords": "corazon"
 	},
 	{
 		"id": "lobo",
@@ -255,7 +258,8 @@
 	{
 		"id": "oso_grizzle",
 		"path": "/escudos/oso, grizzle.png",
-		"keywords": "oso, grizzly, pardo, fuerte, salvaje, bosque, garras"
+		"keywords": "oso, grizzly, pardo, fuerte, salvaje, bosque, garras",
+		"negativeKeywords": "soles"
 	},
 	{
 		"id": "pantera",
@@ -295,7 +299,7 @@
 	{
 		"id": "sol_moneda",
 		"path": "/escudos/sol, moneda.png",
-		"keywords": "sol, moneda, oro, brillante, luz, calor, dorado, estrella"
+		"keywords": "sol, moneda, oro, brillante, luz, calor, dorado, estrella, soles"
 	},
 	{
 		"id": "estrella_plata",
