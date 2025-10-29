@@ -6,14 +6,20 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
 	return NextResponse.json(
-		{ message: "logoAssignment API removed; use client-side matching with /logo_vectors.json" },
+		{
+			message:
+				"logoAssignment API removed; use client-side matching with /logo_vectors.json",
+		},
 		{ status: 410 }
 	);
 }
 
 export async function POST() {
 	return NextResponse.json(
-		{ message: "logoAssignment API removed; use client-side matching with /logo_vectors.json" },
+		{
+			message:
+				"logoAssignment API removed; use client-side matching with /logo_vectors.json",
+		},
 		{ status: 410 }
 	);
 }

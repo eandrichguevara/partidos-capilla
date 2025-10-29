@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useGameStore, type Team } from "@/store/gameStore";
-import { fetchLogoVectors, findTopMatches, fetchLogoDatabase, simpleKeywordMatch } from "@/lib/logoMatching";
+import {
+	fetchLogoVectors,
+	findTopMatches,
+	fetchLogoDatabase,
+	simpleKeywordMatch,
+} from "@/lib/logoMatching";
 
 /**
  * Hook para manejar la gestión de equipos
@@ -26,7 +31,8 @@ export const useTeamManagement = () => {
 			try {
 				const logos = await fetchLogoVectors();
 				// Si no hay logos, lanzar para caer al fallback
-				if (!logos || logos.length === 0) throw new Error("No logo vectors available");
+				if (!logos || logos.length === 0)
+					throw new Error("No logo vectors available");
 
 				// import client embedding helper dynamically (may fail in some dev bundlers)
 				try {
@@ -38,16 +44,25 @@ export const useTeamManagement = () => {
 						if (top[0].score > 0) {
 							logoPath = top[0].path;
 						} else {
-							console.debug("Cliente: mejor match no tiene score positivo, se hará fallback a keyword match", top[0]);
+							console.debug(
+								"Cliente: mejor match no tiene score positivo, se hará fallback a keyword match",
+								top[0]
+							);
 						}
 					}
 				} catch (innerErr) {
-					console.warn("No fue posible inicializar pipeline de embeddings en cliente desde handleAddTeam:", innerErr);
+					console.warn(
+						"No fue posible inicializar pipeline de embeddings en cliente desde handleAddTeam:",
+						innerErr
+					);
 					// fallthrough a keyword match below
 					throw innerErr;
 				}
 			} catch (err) {
-				console.warn("Client-side embedding/matching falló, se intentará fallback por keywords:", err);
+				console.warn(
+					"Client-side embedding/matching falló, se intentará fallback por keywords:",
+					err
+				);
 
 				try {
 					const db = await fetchLogoDatabase();

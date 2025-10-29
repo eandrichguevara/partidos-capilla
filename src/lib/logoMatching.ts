@@ -22,16 +22,24 @@ export async function fetchLogoVectors(): Promise<LogoVector[]> {
 		}
 	} catch (err) {
 		// ignore and try to compute on client
-		console.debug("/logo_vectors.json not available or empty, will try client-side generation:", err);
+		console.debug(
+			"/logo_vectors.json not available or empty, will try client-side generation:",
+			err
+		);
 	}
 
 	// 2) Fallback: compute embeddings in the client from the logo database
 	if (typeof window === "undefined") {
-		throw new Error("Client-side embedding generation requires a browser environment");
+		throw new Error(
+			"Client-side embedding generation requires a browser environment"
+		);
 	}
 
 	const dbRes = await fetch("/logo_database.json");
-	if (!dbRes.ok) throw new Error("No se pudo obtener /logo_database.json para generar embeddings en cliente");
+	if (!dbRes.ok)
+		throw new Error(
+			"No se pudo obtener /logo_database.json para generar embeddings en cliente"
+		);
 	const logos = (await dbRes.json()) as Array<{
 		id: string;
 		path: string;
@@ -40,7 +48,9 @@ export async function fetchLogoVectors(): Promise<LogoVector[]> {
 	// Dynamic import client pipeline helper (bundled only for client code)
 	try {
 		const mod = await import("./clientEmbeddings");
-		const getClientEmbedding = mod.getClientEmbedding as (text: string) => Promise<number[]>;
+		const getClientEmbedding = mod.getClientEmbedding as (
+			text: string
+		) => Promise<number[]>;
 
 		const results: LogoVector[] = [];
 		for (const logo of logos) {
@@ -60,8 +70,15 @@ export async function fetchLogoVectors(): Promise<LogoVector[]> {
 		// (some environments / bundlers may not support it), fall back to
 		// returning empty vectors so the matching logic can fall back to
 		// keyword-based matching elsewhere.
-		console.warn("No fue posible inicializar pipeline de embeddings en cliente, se devolverán vectores vacíos:", err);
-		const results = logos.map((logo) => ({ id: logo.id, path: logo.path, vector: [] as number[] }));
+		console.warn(
+			"No fue posible inicializar pipeline de embeddings en cliente, se devolverán vectores vacíos:",
+			err
+		);
+		const results = logos.map((logo) => ({
+			id: logo.id,
+			path: logo.path,
+			vector: [] as number[],
+		}));
 		cachedLogoVectors = results;
 		return results;
 	}
@@ -81,7 +98,10 @@ export async function fetchLogoDatabase(): Promise<LogoDatabaseEntry[]> {
 	return (await res.json()) as LogoDatabaseEntry[];
 }
 
-export function simpleKeywordMatch(teamName: string, database: LogoDatabaseEntry[]) {
+export function simpleKeywordMatch(
+	teamName: string,
+	database: LogoDatabaseEntry[]
+) {
 	const teamTokens = teamName
 		.toLowerCase()
 		.split(/[^A-Za-z0-9]+/)
