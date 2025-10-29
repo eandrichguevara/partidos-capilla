@@ -99,11 +99,6 @@ export const metadata: Metadata = {
 		description:
 			"Gestiona tus partidos de fútbol estilo 'winner stays' con tabla de posiciones y más.",
 	},
-	viewport: {
-		width: "device-width",
-		initialScale: 1,
-		maximumScale: 5,
-	},
 	robots: {
 		index: true,
 		follow: true,
@@ -117,6 +112,12 @@ export const metadata: Metadata = {
 		apple: "/apple-touch-icon.png",
 	},
 	manifest: "/manifest.json",
+};
+
+export const viewport = {
+	width: "device-width",
+	initialScale: 1,
+	maximumScale: 5,
 };
 
 export default function RootLayout({
