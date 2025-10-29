@@ -53,7 +53,7 @@ export const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="how-it-works-title"
-				className="relative w-full max-w-md rounded-lg bg-gray-900 p-6 text-left shadow-2xl"
+				className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg bg-gray-900 p-6 text-left shadow-2xl"
 				onClick={(event) => event.stopPropagation()}
 			>
 				<h2

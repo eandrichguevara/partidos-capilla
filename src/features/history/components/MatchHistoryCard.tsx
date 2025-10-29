@@ -12,8 +12,8 @@ interface MatchHistoryCardProps {
 	onEditWinnerIdChange: (id: number) => void;
 	editLoserId: number | null;
 	onEditLoserIdChange: (id: number) => void;
-	editReason: "goal" | "timeout";
-	onEditReasonChange: (reason: "goal" | "timeout") => void;
+	editReason: "goal" | "timeout" | "tiebreaker";
+	onEditReasonChange: (reason: "goal" | "timeout" | "tiebreaker") => void;
 	onStartEditMatch: (match: MatchResult) => void;
 	onCancelMatchEdit: () => void;
 	onSwapParticipants: () => void;
@@ -21,8 +21,8 @@ interface MatchHistoryCardProps {
 	onDeleteMatch: (matchId: number) => void;
 }
 
-const formatReason = (reason: "goal" | "timeout") =>
-	reason === "goal" ? "Gol" : "Timeout";
+const formatReason = (reason: "goal" | "timeout" | "tiebreaker") =>
+	reason === "goal" ? "Gol" : reason === "timeout" ? "Timeout" : "Desempate";
 
 export const MatchHistoryCard = ({
 	orderedHistory,
@@ -128,13 +128,17 @@ export const MatchHistoryCard = ({
 														value={editReason}
 														onChange={(e) =>
 															onEditReasonChange(
-																e.target.value as "goal" | "timeout"
+																e.target.value as
+																	| "goal"
+																	| "timeout"
+																	| "tiebreaker"
 															)
 														}
 														className="rounded border border-gray-600 bg-gray-900 p-2 text-white"
 													>
 														<option value="goal">Gol</option>
 														<option value="timeout">Tiempo agotado</option>
+														<option value="tiebreaker">Desempate</option>
 													</select>
 												</label>
 												<div className="flex gap-2">

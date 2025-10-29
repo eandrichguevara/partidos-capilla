@@ -2,8 +2,8 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { Team, MatchResult } from "@/domain/types";
 import { pickContrastingColor } from "@/domain/colors";
-import { getNextMatch, processMatchResult } from "@/domain/match";
 import { calculateLeaderboard } from "@/domain/leaderboard";
+import { deriveTournamentState } from "@/domain/tournament/stateDerivator";
 
 export type { Team, MatchResult } from "@/domain/types";
 
@@ -11,28 +11,21 @@ const DEFAULT_MATCH_DURATION = 5;
 
 const createInitialDataState = () => ({
 	teams: [] as Team[],
-	queue: [] as Team[],
-	currentMatch: null as { team1: Team; team2: Team } | null,
 	matchHistory: [] as MatchResult[],
 	matchDuration: DEFAULT_MATCH_DURATION,
-	defendingTeam: null as Team | null,
 	timeLeft: DEFAULT_MATCH_DURATION * 60,
 	isTimerRunning: false,
 });
 
 interface GameState {
 	teams: Team[];
-	queue: Team[];
-	currentMatch: { team1: Team; team2: Team } | null;
 	matchHistory: MatchResult[];
 	matchDuration: number; // in minutes
-	defendingTeam: Team | null; // The team that won the last match
 	timeLeft: number;
 	isTimerRunning: boolean;
 	setMatchDuration: (duration: number) => void;
 	addTeam: (name: string) => void;
 	editTeamName: (id: number, newName: string) => void;
-	startNextMatch: () => void;
 	endMatch: (winnerId: number, reason: "goal" | "timeout") => void;
 	startTimer: () => void;
 	pauseTimer: () => void;
@@ -43,6 +36,7 @@ interface GameState {
 		data: Partial<Omit<MatchResult, "matchId">>
 	) => void;
 	deleteMatchResult: (matchId: number) => void;
+	addTiebreaker: (winnerId: number, loserId: number) => void;
 	getLeaderboard: () => {
 		team: Team;
 		points: number;
@@ -58,7 +52,7 @@ let teamIdCounter = 1;
 let matchIdCounter = 1;
 type PersistedGameState = Pick<
 	GameState,
-	"teams" | "queue" | "matchHistory" | "defendingTeam" | "matchDuration"
+	"teams" | "matchHistory" | "matchDuration"
 >;
 
 const noopStorage = {
@@ -90,14 +84,8 @@ export const useGameStore = create<GameState>()(
 					const newTeam: Team = { id: teamIdCounter++, name, color };
 					return {
 						teams: [...state.teams, newTeam],
-						queue: [...state.queue, newTeam],
 					};
 				});
-				const state = get();
-				const requiredQueueLength = state.defendingTeam ? 1 : 2;
-				if (!state.currentMatch && state.queue.length >= requiredQueueLength) {
-					state.startNextMatch();
-				}
 			},
 
 			editTeamName: (id, newName) => {
@@ -105,68 +93,39 @@ export const useGameStore = create<GameState>()(
 					team.id === id ? { ...team, name: newName } : team;
 				set((state) => ({
 					teams: state.teams.map(update),
-					queue: state.queue.map(update),
-					currentMatch: state.currentMatch
-						? {
-								team1: update(state.currentMatch.team1),
-								team2: update(state.currentMatch.team2),
-						  }
-						: null,
-					defendingTeam: state.defendingTeam
-						? update(state.defendingTeam)
-						: null,
 				}));
-			},
-
-			startNextMatch: () => {
-				set((state) => {
-					const result = getNextMatch(state.queue, state.defendingTeam);
-
-					if (!result) {
-						return {};
-					}
-
-					return {
-						currentMatch: result.match,
-						queue: result.remainingQueue,
-						timeLeft: state.matchDuration * 60,
-						isTimerRunning: false,
-					};
-				});
 			},
 
 			endMatch: (winnerId, reason) => {
 				set((state) => {
-					if (!state.currentMatch) return {};
-
-					const result = processMatchResult(
-						state.currentMatch,
-						winnerId,
-						reason,
-						state.defendingTeam,
-						state.queue
+					const derived = deriveTournamentState(
+						state.teams,
+						state.matchHistory
 					);
+					if (!derived.currentMatch) return {};
+
+					// Determine winner and loser from current match
+					const winner =
+						derived.currentMatch.team1.id === winnerId
+							? derived.currentMatch.team1
+							: derived.currentMatch.team2;
+					const loser =
+						derived.currentMatch.team1.id === winnerId
+							? derived.currentMatch.team2
+							: derived.currentMatch.team1;
 
 					const newMatchHistory = [
 						...state.matchHistory,
 						{
 							matchId: matchIdCounter++,
-							winnerId: result.winner.id,
-							loserId: result.loser.id,
+							winnerId: winner.id,
+							loserId: loser.id,
 							reason,
 						},
 					];
 
-					const nextMatchResult = getNextMatch(
-						result.newQueue,
-						result.newDefendingTeam
-					);
-
 					return {
 						matchHistory: newMatchHistory,
-						defendingTeam: result.newDefendingTeam,
-						queue: nextMatchResult?.remainingQueue ?? result.newQueue,
-						currentMatch: nextMatchResult?.match ?? null,
 						timeLeft: state.matchDuration * 60,
 						isTimerRunning: false,
 					};
@@ -175,7 +134,11 @@ export const useGameStore = create<GameState>()(
 
 			startTimer: () =>
 				set((state) => {
-					if (!state.currentMatch || state.timeLeft === 0) {
+					const derived = deriveTournamentState(
+						state.teams,
+						state.matchHistory
+					);
+					if (!derived.currentMatch || state.timeLeft === 0) {
 						return {};
 					}
 					return { isTimerRunning: true };
@@ -215,6 +178,20 @@ export const useGameStore = create<GameState>()(
 					),
 				})),
 
+			addTiebreaker: (winnerId, loserId) =>
+				set((state) => {
+					const newMatchHistory = [
+						...state.matchHistory,
+						{
+							matchId: matchIdCounter++,
+							winnerId,
+							loserId,
+							reason: "tiebreaker" as const,
+						},
+					];
+					return { matchHistory: newMatchHistory };
+				}),
+
 			getLeaderboard: () => {
 				const { teams, matchHistory } = get();
 				return calculateLeaderboard(teams, matchHistory);
@@ -235,18 +212,14 @@ export const useGameStore = create<GameState>()(
 			),
 			partialize: (state): PersistedGameState => ({
 				teams: state.teams,
-				queue: state.queue,
 				matchHistory: state.matchHistory,
-				defendingTeam: state.defendingTeam,
 				matchDuration: state.matchDuration,
 			}),
 			migrate: (persistedState: unknown, version) => {
 				if (!persistedState || typeof persistedState !== "object") {
 					return {
 						teams: [],
-						queue: [],
 						matchHistory: [],
-						defendingTeam: null,
 						matchDuration: DEFAULT_MATCH_DURATION,
 					};
 				}
@@ -254,9 +227,7 @@ export const useGameStore = create<GameState>()(
 					const legacyState = persistedState as Partial<PersistedGameState>;
 					return {
 						teams: legacyState.teams ?? [],
-						queue: legacyState.queue ?? [],
 						matchHistory: legacyState.matchHistory ?? [],
-						defendingTeam: legacyState.defendingTeam ?? null,
 						matchDuration: legacyState.matchDuration ?? DEFAULT_MATCH_DURATION,
 					};
 				}
@@ -285,3 +256,28 @@ export const useGameStore = create<GameState>()(
 		}
 	)
 );
+
+// Selectors for derived state
+export const useTournamentState = () => {
+	const matchHistory = useGameStore((state) => state.matchHistory);
+	const teams = useGameStore((state) => state.teams);
+	return deriveTournamentState(teams, matchHistory);
+};
+
+export const useDefendingTeam = () => {
+	const matchHistory = useGameStore((state) => state.matchHistory);
+	const teams = useGameStore((state) => state.teams);
+	return deriveTournamentState(teams, matchHistory).defendingTeam;
+};
+
+export const useQueue = () => {
+	const matchHistory = useGameStore((state) => state.matchHistory);
+	const teams = useGameStore((state) => state.teams);
+	return deriveTournamentState(teams, matchHistory).queue;
+};
+
+export const useCurrentMatch = () => {
+	const matchHistory = useGameStore((state) => state.matchHistory);
+	const teams = useGameStore((state) => state.teams);
+	return deriveTournamentState(teams, matchHistory).currentMatch;
+};

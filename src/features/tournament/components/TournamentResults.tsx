@@ -29,11 +29,12 @@ export const TournamentResults = ({
 	return (
 		<div
 			id="tournament-results"
-			className="relative w-full max-w-md mx-auto p-6 overflow-hidden"
+			className="relative w-full max-w-md mx-auto p-6"
 			style={{
 				background:
 					"linear-gradient(135deg, #312e81 0%, #6b21a8 50%, #831843 100%)",
 				borderRadius: "20px",
+				minHeight: "fit-content",
 			}}
 		>
 			{/* Content */}

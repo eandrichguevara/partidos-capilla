@@ -27,3 +27,34 @@ export const getPodium = (
 export const isValidTournament = (matchCount: number): boolean => {
 	return matchCount >= 3;
 };
+
+/**
+ * Detecta si hay empate entre los dos primeros lugares del leaderboard
+ * considerando puntos y victorias por gol
+ */
+export const detectTieForFirst = (
+	leaderboard: LeaderboardEntry[]
+): { isTied: true; teams: LeaderboardEntry[] } | { isTied: false } => {
+	if (leaderboard.length < 2) {
+		return { isTied: false };
+	}
+
+	const first = leaderboard[0];
+	const second = leaderboard[1];
+
+	// Verificar si están empatados en puntos y victorias por gol
+	if (
+		first.points === second.points &&
+		first.winsByGoal === second.winsByGoal
+	) {
+		// Encontrar todos los equipos empatados en el primer lugar
+		const tiedTeams = leaderboard.filter(
+			(entry) =>
+				entry.points === first.points && entry.winsByGoal === first.winsByGoal
+		);
+
+		return { isTied: true, teams: tiedTeams };
+	}
+
+	return { isTied: false };
+};

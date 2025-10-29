@@ -16,6 +16,35 @@ interface CurrentMatchCardProps {
 	onWin: (winnerId: number, reason: "goal" | "timeout") => void;
 }
 
+/**
+ * Calcula el tamaño de fuente dinámico basado en la longitud del nombre
+ * Rango: 1-16 caracteres
+ * Ajuste granular: un tamaño diferente para cada longitud
+ */
+const getDynamicFontSize = (name: string): string => {
+	const length = name.length;
+	// Tamaños específicos para cada longitud (móvil / escritorio)
+	const sizeMap: Record<number, string> = {
+		1: "text-6xl sm:text-7xl",
+		2: "text-5xl sm:text-6xl",
+		3: "text-5xl sm:text-6xl",
+		4: "text-4xl sm:text-5xl",
+		5: "text-4xl sm:text-5xl",
+		6: "text-4xl sm:text-5xl",
+		7: "text-3xl sm:text-4xl",
+		8: "text-3xl sm:text-4xl",
+		9: "text-3xl sm:text-4xl",
+		10: "text-2xl sm:text-3xl",
+		11: "text-2xl sm:text-3xl",
+		12: "text-2xl sm:text-3xl",
+		13: "text-xl sm:text-2xl",
+		14: "text-xl sm:text-2xl",
+		15: "text-xl sm:text-2xl",
+		16: "text-xl sm:text-2xl",
+	};
+	return sizeMap[length] || "text-2xl sm:text-3xl";
+};
+
 export const CurrentMatchCard = ({
 	currentMatch,
 	defendingTeam,
@@ -44,28 +73,75 @@ export const CurrentMatchCard = ({
 				Partido Actual
 			</h2>
 			<div className="flex flex-col items-center">
-				<div className="flex justify-around w-full text-2xl font-bold mb-4">
-					<span
-						className={`transition ${
-							defendingTeam?.id === currentMatch.team1.id
-								? "underline decoration-4 underline-offset-8"
-								: ""
-						}`}
-						style={{ color: currentMatch.team1.color }}
-					>
-						{currentMatch.team1.name}
-					</span>
-					<span className="text-gray-300">vs</span>
-					<span
-						className={`transition ${
-							defendingTeam?.id === currentMatch.team2.id
-								? "underline decoration-4 underline-offset-8"
-								: ""
-						}`}
-						style={{ color: currentMatch.team2.color }}
-					>
-						{currentMatch.team2.name}
-					</span>
+				{/* Versus estilo juego de pelea */}
+				<div className="relative w-full mb-6 py-8 px-4 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-xl border-2 border-yellow-500/50 shadow-2xl overflow-visible">
+					{/* Efectos de fondo */}
+					<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-yellow-500/10 via-transparent to-transparent pointer-events-none rounded-xl"></div>
+					<div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent animate-pulse pointer-events-none"></div>
+					<div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent animate-pulse pointer-events-none"></div>
+
+					<div className="relative flex flex-col items-center justify-center min-h-[160px] pointer-events-none">
+						{/* Equipo 1 - Arriba Izquierda */}
+						<div
+							key={currentMatch.team1.id}
+							className="absolute top-0 left-0 flex flex-col items-start max-w-[45%] animate-[slideInLeft_0.6s_ease-out]"
+						>
+							<div
+								className={`relative ${getDynamicFontSize(
+									currentMatch.team1.name
+								)} font-black tracking-wider transform transition-all duration-300 hover:scale-105 break-words max-w-full ${
+									defendingTeam?.id === currentMatch.team1.id
+										? "animate-pulse"
+										: ""
+								}`}
+								style={{
+									color: currentMatch.team1.color,
+									textShadow: `0 0 20px ${currentMatch.team1.color}80, 0 0 40px ${currentMatch.team1.color}40, 2px 2px 4px rgba(0,0,0,0.8)`,
+									WebkitTextStroke: "1px rgba(0,0,0,0.5)",
+								}}
+							>
+								{currentMatch.team1.name}
+							</div>
+						</div>
+
+						{/* VS Central */}
+						<div className="flex flex-col items-center justify-center z-10">
+							<span
+								className="text-2xl sm:text-3xl font-black tracking-widest"
+								style={{
+									color: "#fbbf24",
+									textShadow:
+										"0 0 20px rgba(251, 191, 36, 0.6), 2px 2px 4px rgba(0,0,0,0.8)",
+									WebkitTextStroke: "1px rgba(0,0,0,0.5)",
+								}}
+							>
+								VS
+							</span>
+						</div>
+
+						{/* Equipo 2 - Abajo Derecha */}
+						<div
+							key={currentMatch.team2.id}
+							className="absolute bottom-0 right-0 flex flex-col items-end max-w-[45%] animate-[slideInRight_0.6s_ease-out]"
+						>
+							<div
+								className={`relative ${getDynamicFontSize(
+									currentMatch.team2.name
+								)} font-black tracking-wider transform transition-all duration-300 hover:scale-105 break-words max-w-full ${
+									defendingTeam?.id === currentMatch.team2.id
+										? "animate-pulse"
+										: ""
+								}`}
+								style={{
+									color: currentMatch.team2.color,
+									textShadow: `0 0 20px ${currentMatch.team2.color}80, 0 0 40px ${currentMatch.team2.color}40, 2px 2px 4px rgba(0,0,0,0.8)`,
+									WebkitTextStroke: "1px rgba(0,0,0,0.5)",
+								}}
+							>
+								{currentMatch.team2.name}
+							</div>
+						</div>
+					</div>
 				</div>
 				<Timer />
 				<div className="mt-4 flex w-full justify-around gap-3">
@@ -134,21 +210,49 @@ export const CurrentMatchCard = ({
 							</span>
 						</button>
 					</div>
-					<div className="flex justify-around mt-8">
-						<button
-							onClick={() => onWin(currentMatch.team1.id, "timeout")}
-							className="rounded-lg px-4 py-2 font-semibold text-white shadow-md shadow-black/20 transition hover:brightness-110"
-							style={{ backgroundColor: currentMatch.team1.color }}
-						>
-							Timeout {currentMatch.team1.name}
-						</button>
-						<button
-							onClick={() => onWin(currentMatch.team2.id, "timeout")}
-							className="rounded-lg px-4 py-2 font-semibold text-white shadow-md shadow-black/20 transition hover:brightness-110"
-							style={{ backgroundColor: currentMatch.team2.color }}
-						>
-							Timeout {currentMatch.team2.name}
-						</button>
+					<div className="flex justify-around gap-3 mt-8">
+						{/* Primer partido: ambos equipos pueden ganar por timeout */}
+						{!defendingTeam && (
+							<>
+								<button
+									onClick={() => onWin(currentMatch.team1.id, "timeout")}
+									className="rounded-lg px-4 py-2 font-semibold text-white shadow-md shadow-black/20 transition hover:brightness-110"
+									style={{ backgroundColor: currentMatch.team1.color }}
+								>
+									Timeout {currentMatch.team1.name}
+								</button>
+								<button
+									onClick={() => onWin(currentMatch.team2.id, "timeout")}
+									className="rounded-lg px-4 py-2 font-semibold text-white shadow-md shadow-black/20 transition hover:brightness-110"
+									style={{ backgroundColor: currentMatch.team2.color }}
+								>
+									Timeout {currentMatch.team2.name}
+								</button>
+							</>
+						)}
+						{/* Después del primer partido: solo el retador puede ganar por timeout */}
+						{defendingTeam && (
+							<>
+								{defendingTeam.id !== currentMatch.team1.id && (
+									<button
+										onClick={() => onWin(currentMatch.team1.id, "timeout")}
+										className="rounded-lg px-4 py-2 font-semibold text-white shadow-md shadow-black/20 transition hover:brightness-110"
+										style={{ backgroundColor: currentMatch.team1.color }}
+									>
+										Timeout {currentMatch.team1.name}
+									</button>
+								)}
+								{defendingTeam.id !== currentMatch.team2.id && (
+									<button
+										onClick={() => onWin(currentMatch.team2.id, "timeout")}
+										className="rounded-lg px-4 py-2 font-semibold text-white shadow-md shadow-black/20 transition hover:brightness-110"
+										style={{ backgroundColor: currentMatch.team2.color }}
+									>
+										Timeout {currentMatch.team2.name}
+									</button>
+								)}
+							</>
+						)}
 					</div>
 				</div>
 			</div>

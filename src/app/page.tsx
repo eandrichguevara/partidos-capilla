@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useGameStore } from "@/store/gameStore";
+import { useState } from "react";
 
 // Features
 import { CurrentMatchCard, useCurrentMatch } from "@/features/match";
@@ -14,6 +13,7 @@ import {
 	TournamentResults,
 	ConfirmEndTournamentModal,
 	EndTournamentButton,
+	TiebreakModal,
 	useTournament,
 } from "@/features/tournament";
 
@@ -31,21 +31,6 @@ export default function HomePage() {
 	const settings = useSettings();
 	const history = useMatchHistory();
 	const tournament = useTournament();
-
-	// Estado global
-	const currentMatch = useGameStore((state) => state.currentMatch);
-	const defendingTeam = useGameStore((state) => state.defendingTeam);
-	const startNextMatch = useGameStore((state) => state.startNextMatch);
-
-	// Auto-iniciar partido cuando hay suficientes equipos
-	useEffect(() => {
-		if (
-			!currentMatch &&
-			(queue.length >= 2 || (defendingTeam && queue.length >= 1))
-		) {
-			startNextMatch();
-		}
-	}, [currentMatch, defendingTeam, queue, startNextMatch]);
 
 	return (
 		<div className="bg-gray-900 text-white min-h-screen flex flex-col items-center p-4 font-sans w-full max-w-md mx-auto">
@@ -136,29 +121,29 @@ export default function HomePage() {
 					onClick={tournament.handleCloseResults}
 				>
 					<div
-						className="relative max-w-2xl w-full"
+						className="relative max-w-md w-full"
 						onClick={(e) => e.stopPropagation()}
 					>
 						<TournamentResults
 							champion={tournament.champion}
 							podium={tournament.podium}
 						/>
-						<div className="mt-4 flex gap-3 justify-center">
+						<div className="mt-4 flex flex-col gap-2 w-full">
 							<button
 								onClick={tournament.handleShare}
-								className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition flex items-center gap-2"
+								className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
 							>
 								📱 Compartir en WhatsApp
 							</button>
 							<button
 								onClick={tournament.handleOpenConfirmModal}
-								className="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-lg transition"
+								className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-3 rounded-lg transition"
 							>
 								🗑️ Reiniciar Torneo
 							</button>
 							<button
 								onClick={tournament.handleCloseResults}
-								className="bg-gray-700 hover:bg-gray-600 text-white font-semibold px-6 py-3 rounded-lg transition"
+								className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold px-4 py-3 rounded-lg transition"
 							>
 								Cerrar
 							</button>
@@ -172,6 +157,14 @@ export default function HomePage() {
 				isOpen={tournament.showConfirmModal}
 				onConfirm={tournament.handleFinishTournament}
 				onCancel={tournament.handleCloseConfirmModal}
+			/>
+
+			{/* Tiebreak Modal */}
+			<TiebreakModal
+				isOpen={tournament.showTiebreakModal}
+				tiedTeams={tournament.tiedTeams}
+				onSelectWinner={tournament.handleSelectTiebreakerWinner}
+				onCancel={tournament.handleCloseTiebreakModal}
 			/>
 		</div>
 	);

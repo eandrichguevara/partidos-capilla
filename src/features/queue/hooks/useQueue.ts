@@ -1,10 +1,10 @@
-import { useGameStore } from "@/store/gameStore";
+import { useQueue as useQueueDerived } from "@/store/gameStore";
 
 /**
  * Hook para manejar la cola de equipos
  */
 export const useQueue = () => {
-	const queue = useGameStore((state) => state.queue);
+	const queue = useQueueDerived();
 
 	return {
 		queue,

@@ -1,11 +1,15 @@
-import { useGameStore } from "@/store/gameStore";
+import {
+	useGameStore,
+	useCurrentMatch as useCurrentMatchDerived,
+	useDefendingTeam,
+} from "@/store/gameStore";
 
 /**
  * Hook para manejar el partido actual y sus controles
  */
 export const useCurrentMatch = () => {
-	const currentMatch = useGameStore((state) => state.currentMatch);
-	const defendingTeam = useGameStore((state) => state.defendingTeam);
+	const currentMatch = useCurrentMatchDerived();
+	const defendingTeam = useDefendingTeam();
 	const timeLeft = useGameStore((state) => state.timeLeft);
 	const isTimerRunning = useGameStore((state) => state.isTimerRunning);
 	const matchDuration = useGameStore((state) => state.matchDuration);

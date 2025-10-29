@@ -8,7 +8,7 @@ export interface MatchResult {
 	matchId: number;
 	winnerId: number;
 	loserId: number;
-	reason: "goal" | "timeout";
+	reason: "goal" | "timeout" | "tiebreaker";
 }
 
 export interface CurrentMatch {

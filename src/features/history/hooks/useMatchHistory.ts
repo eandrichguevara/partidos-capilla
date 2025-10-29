@@ -8,7 +8,9 @@ export const useMatchHistory = () => {
 	const [editingMatchId, setEditingMatchId] = useState<number | null>(null);
 	const [editWinnerId, setEditWinnerId] = useState<number | null>(null);
 	const [editLoserId, setEditLoserId] = useState<number | null>(null);
-	const [editReason, setEditReason] = useState<"goal" | "timeout">("goal");
+	const [editReason, setEditReason] = useState<
+		"goal" | "timeout" | "tiebreaker"
+	>("goal");
 
 	const teams = useGameStore((state) => state.teams);
 	const matchHistory = useGameStore((state) => state.matchHistory);

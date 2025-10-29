@@ -48,6 +48,7 @@ export const TeamManagementCard = ({
 							value={teamName}
 							onChange={(e) => onTeamNameChange(e.target.value)}
 							placeholder="Nombre del equipo"
+							maxLength={16}
 							className="bg-gray-700 text-white p-2 rounded-l-md grow"
 						/>
 						<button
@@ -74,6 +75,7 @@ export const TeamManagementCard = ({
 											type="text"
 											value={newTeamName}
 											onChange={(e) => onNewTeamNameChange(e.target.value)}
+											maxLength={16}
 											className="bg-gray-600 text-white p-1 rounded-md"
 										/>
 									) : (

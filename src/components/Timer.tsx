@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { useGameStore } from "@/store/gameStore";
+import { useGameStore, useCurrentMatch } from "@/store/gameStore";
 
 const Timer = () => {
 	const timeLeft = useGameStore((state) => state.timeLeft);
 	const isTimerRunning = useGameStore((state) => state.isTimerRunning);
-	const currentMatch = useGameStore((state) => state.currentMatch);
+	const currentMatch = useCurrentMatch();
 	const decrementTimer = useGameStore((state) => state.decrementTimer);
 
 	useEffect(() => {

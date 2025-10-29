@@ -4,13 +4,18 @@ import {
 	getTournamentWinner,
 	getPodium,
 	isValidTournament,
+	detectTieForFirst,
 } from "@/domain/tournament";
+import type { LeaderboardEntry } from "@/domain/types";
 
 export const useTournament = () => {
 	const [showResults, setShowResults] = useState(false);
 	const [showConfirmModal, setShowConfirmModal] = useState(false);
+	const [showTiebreakModal, setShowTiebreakModal] = useState(false);
+	const [tiedTeams, setTiedTeams] = useState<LeaderboardEntry[]>([]);
 
-	const { matchHistory, resetStore, getLeaderboard } = useGameStore();
+	const { matchHistory, resetStore, getLeaderboard, addTiebreaker } =
+		useGameStore();
 
 	const leaderboard = getLeaderboard();
 	const champion = getTournamentWinner(leaderboard);
@@ -24,7 +29,33 @@ export const useTournament = () => {
 			);
 			return;
 		}
-		setShowResults(true);
+
+		// Verificar si hay empate
+		const tieResult = detectTieForFirst(leaderboard);
+		if (tieResult.isTied) {
+			setTiedTeams(tieResult.teams);
+			setShowTiebreakModal(true);
+		} else {
+			setShowResults(true);
+		}
+	};
+
+	const handleCloseTiebreakModal = () => {
+		setShowTiebreakModal(false);
+		setTiedTeams([]);
+	};
+
+	const handleSelectTiebreakerWinner = (winnerId: number) => {
+		// Encontrar el perdedor (el otro equipo empatado)
+		const loserId = tiedTeams.find((t) => t.team.id !== winnerId)?.team.id;
+
+		if (loserId) {
+			addTiebreaker(winnerId, loserId);
+			setShowTiebreakModal(false);
+			setTiedTeams([]);
+			// Después de resolver el empate, mostrar los resultados
+			setShowResults(true);
+		}
 	};
 
 	const handleCloseResults = () => {
@@ -56,6 +87,10 @@ export const useTournament = () => {
 			// Importación dinámica solo en el cliente
 			const { toPng } = await import("html-to-image");
 
+			// Obtener dimensiones del elemento incluyendo todo su contenido
+			const scrollHeight = element.scrollHeight;
+			const scrollWidth = element.scrollWidth;
+
 			// Usar html-to-image para capturar el elemento
 			const dataUrl = await toPng(element, {
 				quality: 1,
@@ -63,8 +98,10 @@ export const useTournament = () => {
 				backgroundColor: "#312e81",
 				cacheBust: true,
 				skipFonts: false,
-				canvasWidth: element.offsetWidth * 2,
-				canvasHeight: element.offsetHeight * 2,
+				width: scrollWidth,
+				height: scrollHeight,
+				canvasWidth: scrollWidth * 2,
+				canvasHeight: scrollHeight * 2,
 			});
 
 			// Convertir data URL a blob
@@ -104,6 +141,8 @@ export const useTournament = () => {
 	return {
 		showResults,
 		showConfirmModal,
+		showTiebreakModal,
+		tiedTeams,
 		champion,
 		podium,
 		canFinish,
@@ -113,5 +152,7 @@ export const useTournament = () => {
 		handleCloseConfirmModal,
 		handleFinishTournament,
 		handleShare,
+		handleCloseTiebreakModal,
+		handleSelectTiebreakerWinner,
 	};
 };
