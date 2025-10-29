@@ -1,36 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
+import logoDatabaseJson from "./logoDatabase.json";
 
-// 1. INSTALACIÓN REQUERIDA:
-// npm install @xenova/transformers
-
-// 2. IMPORTACIÓN DE TRANSFORMERS
+// 1. IMPORTACIÓN DE TRANSFORMERS (dinámica)
 // Usamos una importación dinámica dentro de una clase para un patrón Singleton.
-// Esto asegura que el modelo de IA se cargue solo UNA VEZ en el servidor.
+// Esto asegura que el modelo de IA se cargue solo UNA VEZ en el servidor (si está disponible).
 class EmbeddingPipeline {
 	static instance: any = null;
 
 	static async getInstance() {
 		if (this.instance === null) {
-			// Importa la biblioteca dinámicamente.
-			// Puede fallar en entornos serverless (Vercel) si faltan librerías nativas.
 			try {
 				const { pipeline } = await import("@xenova/transformers");
-
 				console.log("Cargando modelo de embeddings por primera vez...");
 				this.instance = await pipeline(
 					"feature-extraction",
 					"Xenova/all-MiniLM-L6-v2",
 					{
-						quantized: true, // Usa una versión más pequeña y rápida
+						quantized: true,
 					}
 				);
 				console.log("Modelo de embeddings cargado exitosamente.");
 			} catch (err) {
-				// Si la importación o carga falla (ej: falta libonnxruntime en Vercel),
-				// marcamos que no hay embeddings disponibles y devolvemos null.
 				console.error("No fue posible cargar @xenova/transformers:", err);
 				this.instance = null;
-				// Lanzamos para que el llamador sepa que hubo un problema y pueda usar fallback
 				throw err;
 			}
 		}
@@ -41,402 +35,16 @@ class EmbeddingPipeline {
 // Flag global que indica si el servicio de embeddings está disponible
 let embeddingsAvailable = true;
 
-// --- TIPO DE LOGO EN LA BASE DE DATOS ---
+// Importamos la base de datos estática desde JSON para poder compartirla
+// con el script de generación de embeddings.
 type LogoData = {
 	id: string;
 	path: string;
 	keywords: string;
-	negativeKeywords?: string; // Opcional: reduce el score si aparecen
-	exclusions?: string; // Opcional: descarta el logo si aparecen
+	negativeKeywords?: string;
+	exclusions?: string;
 };
-
-// --- BASE DE DATOS DE LOGOS ---
-// Base de datos con todos los escudos disponibles y sus palabras clave descriptivas
-// Keywords negativas: reducen el score si aparecen en el nombre del equipo
-// Exclusiones: si el nombre contiene estas palabras, el logo NO se considerará
-const logoDatabase: LogoData[] = [
-	{
-		id: "franja_azul_cielo",
-		path: "/escudos/franja, azul cielo, direccion, flecha.png",
-		keywords:
-			"franja, azul cielo, dirección, flecha, señal, movimiento, banda, celeste, orientación, camino",
-	},
-	{
-		id: "bota_de_oro",
-		path: "/escudos/bota de oro, zapatilla, zapato, goleador, pichichi.png",
-		keywords:
-			"bota de oro, zapatilla, zapato, goleador, pichichi, premio, fútbol, máximo goleador, trofeo, dorado",
-	},
-	{
-		id: "sol_puesta_albiceleste",
-		path: "/escudos/sol, puesta, horizonte, albiceleste, amanecer.png",
-		keywords:
-			"sol, puesta, horizonte, albiceleste, amanecer, atardecer, cielo, luz, azul, blanco, argentina, día, nuevo comienzo",
-	},
-	{
-		id: "atletico_azul_celeste",
-		path: "/escudos/A, atletico, azul celeste.png",
-		keywords: "atlético, azul, celeste, letra A, deporte, cielo, agua",
-		negativeKeywords: "", // Opcional: palabras que reducen el score
-		exclusions: "", // Opcional: palabras que descartan completamente el logo
-	},
-	{
-		id: "anclas_oxidadas",
-		path: "/escudos/Anclas oxidadas.png",
-		keywords: "ancla, oxidado, mar, marino, náutico, barco, navío, vintage",
-	},
-	{
-		id: "aguila_real",
-		path: "/escudos/aguila, real.png",
-		keywords: "águila, real, ave, pájaro, majestuoso, vuelo, libertad, cielo",
-	},
-	{
-		id: "ala_angel",
-		path: "/escudos/ala, angel, pureza, santidad.png",
-		keywords:
-			"ala, ángel, pureza, santidad, divino, celestial, blanco, sagrado",
-		negativeKeywords: "demonio, oscuro, maldito",
-	},
-	{
-		id: "anillo_santos",
-		path: "/escudos/anillo, santos.png",
-		keywords: "anillo, santos, círculo, sagrado, reliquia, poder",
-		negativeKeywords: "misioneros, mormones, moroni",
-	},
-	{
-		id: "anillos_enredado",
-		path: "/escudos/anillos, enredado, verde amarillo.png",
-		keywords: "anillos, enredado, verde, amarillo, enlazado, unión, conexión",
-	},
-	{
-		id: "arbol_naturaleza",
-		path: "/escudos/arbol, naturaleza, fuerza.png",
-		keywords: "árbol, naturaleza, fuerza, verde, bosque, raíces, crecimiento",
-	},
-	{
-		id: "aurora_boreal",
-		path: "/escudos/aurora boreal, verde, planta.png",
-		keywords: "aurora, boreal, verde, planta, luz, norte, mágico, natural",
-	},
-	{
-		id: "buho",
-		path: "/escudos/buho.png",
-		keywords: "búho, lechuza, sabiduría, noche, nocturno, inteligente",
-	},
-	{
-		id: "caballero_templario",
-		path: "/escudos/caballero, templario, metal, cruz roja, honor.png",
-		keywords:
-			"caballero, templario, metal, cruz, rojo, honor, guerrero, medieval",
-	},
-	{
-		id: "caballo_magico",
-		path: "/escudos/caballo, ser magico, verde.png",
-		keywords: "caballo, mágico, verde, unicornio, místico, fantasía",
-	},
-	{
-		id: "casco_robot",
-		path: "/escudos/casco, robot, plata.png",
-		keywords: "casco, robot, plata, tecnología, futurista, máquina, metal",
-	},
-	{
-		id: "chargers_rayo",
-		path: "/escudos/chargers, rayo, energia.png",
-		keywords:
-			"chargers, rayo, energía, electricidad, cargadores, poder, velocidad, trueno",
-	},
-	{
-		id: "cobra_verde",
-		path: "/escudos/cobra, verde.png",
-		keywords: "cobra, verde, serpiente, venenosa, reptil, peligrosa, ágil",
-	},
-	{
-		id: "colo_colo",
-		path: "/escudos/colo-colo, lautaro, caupolican, mapuche, araucano.png",
-		keywords:
-			"colo colo, colo-colo, cacique, lautaro, caupolicán, mapuche, araucano, chile, guerrero, indígena, fútbol chileno",
-	},
-	{
-		id: "cometa_azul",
-		path: "/escudos/cometa, azul.png",
-		keywords: "cometa, azul, espacio, estrella, velocidad, cosmos",
-	},
-	{
-		id: "condor_chile",
-		path: "/escudos/condor, chile, la roja, vuelo.png",
-		keywords:
-			"la roja, chile, cóndor, selección chilena, equipo nacional, fútbol chileno, roja, vuelo, ave, andino, majestuoso",
-	},
-	{
-		id: "corazon_espada",
-		path: "/escudos/corazon, espada, desamor.png",
-		keywords: "corazón, espada, desamor, dolor, atravesado, roto, pasión",
-	},
-	{
-		id: "corona_M_dorada",
-		path: "/escudos/corona, M, dorada.png",
-		keywords: "corona, M, dorada, oro, realeza, majestuoso, letra, rey",
-	},
-	{
-		id: "corona_dorada",
-		path: "/escudos/corona, dorada.png",
-		keywords: "corona, dorada, oro, rey, realeza, poder, monarca",
-	},
-	{
-		id: "craneo_negro",
-		path: "/escudos/craneo, negro.png",
-		keywords: "cráneo, negro, calavera, muerte, oscuro, temible, pirata",
-	},
-	{
-		id: "diablo_rojo",
-		path: "/escudos/diablo, demonio, rojo, enojo.png",
-		keywords: "diablo, demonio, rojo, enojo, fuego, infernal, ira, furia",
-	},
-	{
-		id: "diamante_negro",
-		path: "/escudos/diamante, negro.png",
-		keywords: "diamante, negro, joya, elegante, lujo, valioso, oscuro",
-	},
-	{
-		id: "edificio_futuro",
-		path: "/escudos/dificio, futuro.png",
-		keywords: "edificio, futuro, construcción, ciudad, moderno, arquitectura",
-	},
-	{
-		id: "dragon_rojo",
-		path: "/escudos/dragon, rojo, ira.png",
-		keywords: "dragón, rojo, ira, fuego, furia, bestia, mítico, poderoso",
-	},
-	{
-		id: "engranaje_mecanica",
-		path: "/escudos/engranaje, mecanica, tecnologia.png",
-		keywords: "engranaje, mecánica, tecnología, máquina, industria, precisión",
-	},
-	{
-		id: "escudo_dorado",
-		path: "/escudos/escudo, proteccion, dorado, brillo.png",
-		keywords: "escudo, protección, dorado, brillo, defensa, oro, seguridad",
-	},
-	{
-		id: "estrella_fugaz",
-		path: "/escudos/estrella, fugaz, amarillo, fuego.png",
-		keywords: "estrella, fugaz, amarillo, fuego, deseo, velocidad, brillante",
-	},
-	{
-		id: "fantasma",
-		path: "/escudos/fantasma.png",
-		keywords: "fantasma, espectro, espíritu, blanco, invisible, misterioso",
-	},
-	{
-		id: "fenix_fuego",
-		path: "/escudos/fenix, fuego, rojo.png",
-		keywords: "fénix, fuego, rojo, renacimiento, inmortal, ave, resurrección",
-	},
-	{
-		id: "flecha_verde",
-		path: "/escudos/flexha, verde, velocidad.png",
-		keywords: "flecha, verde, velocidad, rápido, dirección, precisión, apuntar",
-	},
-	{
-		id: "gladiador_negro",
-		path: "/escudos/gladiador, negro.png",
-		keywords: "gladiador, negro, guerrero, romano, arena, combate, fuerza",
-	},
-	{
-		id: "grifo",
-		path: "/escudos/grifo, hipogrifo.png",
-		keywords: "grifo, hipogrifo, mítico, águila, león, bestia, guardián",
-	},
-	{
-		id: "halcon_metal",
-		path: "/escudos/halcon, metal, libertad.png",
-		keywords: "halcón, metal, libertad, ave, vuelo, velocidad, cazador",
-		exclusions: "albiceleste",
-	},
-	{
-		id: "hamburguesa",
-		path: "/escudos/hamburguesa.png",
-		keywords: "hamburguesa, comida, burger, restaurante, apetito, food",
-	},
-	{
-		id: "insignia_militar",
-		path: "/escudos/insignia, cobre, militar.png",
-		keywords: "insignia, cobre, militar, medalla, honor, ejército, rango",
-	},
-	{
-		id: "kraken",
-		path: "/escudos/kraken, negro.png",
-		keywords:
-			"kraken, negro, pulpo, calamar, mar, monstruo, tentáculos, océano",
-	},
-	{
-		id: "leon_amarillo",
-		path: "/escudos/leon, amarillo.png",
-		keywords: "león, amarillo, rey, felino, salvaje, melena, valentía, fuerza",
-	},
-	{
-		id: "lobo",
-		path: "/escudos/lobo.png",
-		keywords: "lobo, manada, aullido, luna, cazador, salvaje, pack",
-	},
-	{
-		id: "mano_blaugrana",
-		path: "/escudos/mano, indicacion, blaugrana.png",
-		keywords: "mano, indicación, blaugrana, azul, grana, señal, dirección",
-	},
-	{
-		id: "martillo_negro",
-		path: "/escudos/martillo, negro.png",
-		keywords: "martillo, negro, herramienta, fuerza, golpe, construcción, Thor",
-	},
-	{
-		id: "medialuna_magia",
-		path: "/escudos/medialuna, magia, plata, noche.png",
-		keywords: "media luna, magia, plata, noche, luna, místico, nocturno",
-	},
-	{
-		id: "minotauro",
-		path: "/escudos/minotauro.png",
-		keywords: "minotauro, toro, bestia, laberinto, mítico, cuernos, fuerte",
-	},
-	{
-		id: "motor_automovil",
-		path: "/escudos/motor, automovil.png",
-		keywords: "motor, automóvil, carro, velocidad, potencia, racing, mecánico",
-	},
-	{
-		id: "ola_mar",
-		path: "/escudos/ola, agua, mar, celeste.png",
-		keywords: "ola, agua, mar, celeste, océano, surf, azul, playa",
-	},
-	{
-		id: "oso_polar",
-		path: "/escudos/oso polar, azul, furia, invierno, frio.png",
-		keywords: "oso, polar, azul, furia, invierno, frío, nieve, ártico, hielo",
-	},
-	{
-		id: "oso_grizzle",
-		path: "/escudos/oso, grizzle.png",
-		keywords: "oso, grizzly, pardo, fuerte, salvaje, bosque, garras",
-	},
-	{
-		id: "pantera",
-		path: "/escudos/pantera.png",
-		keywords: "pantera, negra, felino, ágil, sigiloso, velocidad, elegante",
-	},
-	{
-		id: "piedra_roca",
-		path: "/escudos/piedra, roca, meteorito, fuerza, potencia.png",
-		keywords: "piedra, roca, meteorito, fuerza, potencia, sólido, duro",
-	},
-	{
-		id: "pirata_craneo",
-		path: "/escudos/pirata, craneo.png",
-		keywords: "pirata, cráneo, calavera, mar, bucanero, barco, tesoro",
-	},
-	{
-		id: "portal_violeta",
-		path: "/escudos/portal, violeta, morado, elipse, rosa, circular, espacio, galaxia.png",
-		keywords:
-			"portal, violeta, morado, elipse, rosa, circular, espacio, galaxia, dimensional",
-	},
-	{
-		id: "rayo_celeste",
-		path: "/escudos/rayo, celeste.png",
-		keywords: "rayo, celeste, trueno, electricidad, velocidad, energía, poder",
-	},
-	{
-		id: "samurai",
-		path: "/escudos/samurai.png",
-		keywords: "samurai, guerrero, japonés, katana, honor, bushido, disciplina",
-	},
-	{
-		id: "serpiente_verde",
-		path: "/escudos/serpiente, verde.png",
-		keywords: "serpiente, verde, reptil, escamas, sinuosa, ágil, veneno",
-	},
-	{
-		id: "sol_moneda",
-		path: "/escudos/sol, moneda.png",
-		keywords: "sol, moneda, oro, brillante, luz, calor, dorado, estrella",
-	},
-	{
-		id: "estrella_plata",
-		path: "/escudos/strella, plata.png",
-		keywords: "estrella, plata, plateado, brillante, cinco puntas, cielo",
-	},
-	{
-		id: "tiburon",
-		path: "/escudos/tiburon.png",
-		keywords: "tiburón, mar, depredador, océano, dientes, salvaje, peligroso",
-	},
-	{
-		id: "tigre_naranja",
-		path: "/escudos/tigre, rayado, naranja, determinacion.png",
-		keywords:
-			"tigre, rayado, naranja, determinación, felino, rayas, feroz, jungla",
-	},
-	{
-		id: "titan",
-		path: "/escudos/titan.png",
-		keywords: "titán, gigante, poderoso, mítico, fuerza, colosal, enorme",
-	},
-	{
-		id: "torre_antigua",
-		path: "/escudos/torre, antigua, marfil.png",
-		keywords: "torre, antigua, marfil, castillo, fortaleza, medieval, defensa",
-	},
-	{
-		id: "tralalero_brainrot",
-		path: "/escudos/tralalero, tralala, tiburon, zapatilla, brainrot.png",
-		keywords:
-			"tralalero, tralala, tiburón, zapatilla, brainrot, meme, divertido, absurdo, random",
-	},
-	{
-		id: "triangulos_geometricos",
-		path: "/escudos/triangulos, blanco negro dorado.png",
-		keywords:
-			"triángulos, blanco, negro, dorado, geométrico, moderno, abstracto",
-	},
-	{
-		id: "trompeta_moroni",
-		path: "/escudos/trompeta, moroni, instrumento, santos.png",
-		keywords:
-			"trompeta, moroni, instrumento, santos, ángel, música, sagrado, religioso",
-	},
-	{
-		id: "u_catolica",
-		path: "/escudos/u catolica, cruzados, UC.png",
-		keywords: "u catolica, universidad católica, UC, cruzados, católica",
-		negativeKeywords:
-			"universidad de chile, la U, azul, romántico viajero, chuncho, ballet azul, u de chile",
-		exclusions: "u de chile, la u, chuncho",
-	},
-	{
-		id: "universidad_u",
-		path: "/escudos/universidad, U.png",
-		keywords:
-			"universidad de chile, U, la U, azul, romántico viajero, chuncho, ballet azul, u de chile",
-		negativeKeywords:
-			"universidad católica, UC, cruzados, católica, u catolica",
-		exclusions: "católica, UC, cruzados",
-	},
-	{
-		id: "vikingo",
-		path: "/escudos/vikingo.png",
-		keywords: "vikingo, nórdico, guerrero, hacha, casco, cuernos, escandinavo",
-	},
-	{
-		id: "volcan_explosion",
-		path: "/escudos/volcan, explosion, calor, naturaleza.png",
-		keywords: "volcán, explosión, calor, naturaleza, lava, fuego, erupción",
-	},
-	{
-		id: "x_cruzadas",
-		path: "/escudos/x, cruzadas, rojiblanco.png",
-		keywords: "X, cruzadas, rojo, blanco, rojiblanco, cruz, marca, símbolo",
-	},
-];
+const logoDatabase: LogoData[] = logoDatabaseJson as unknown as LogoData[];
 
 // --- "BASE DE DATOS VECTORIAL" SIMPLE ---
 // Usaremos un caché en memoria para almacenar los vectores de tus logos.
@@ -472,17 +80,44 @@ async function getLogoVectors(): Promise<LogoVector[]> {
 		return cachedLogoVectors;
 	}
 
-	console.log("Generando vectores de logos por primera vez...");
+	// Primero, si existe un archivo con vectores precomputados, lo cargamos.
+	const vectorsPath = path.join(
+		process.cwd(),
+		"src",
+		"app",
+		"api",
+		"logoAssignment",
+		"logo_vectors.json"
+	);
+
+	try {
+		if (fs.existsSync(vectorsPath)) {
+			const raw = fs.readFileSync(vectorsPath, "utf-8");
+			const parsed = JSON.parse(raw) as Array<{
+				id: string;
+				path: string;
+				vector: number[];
+			}>;
+			cachedLogoVectors = parsed.map((p) => ({
+				id: p.id,
+				path: p.path,
+				vector: p.vector,
+			}));
+			console.log("Cargados vectores de logos desde logo_vectors.json");
+			return cachedLogoVectors;
+		}
+	} catch (err) {
+		console.warn("No se pudo leer logo_vectors.json:", err);
+		// seguimos intentando generar embeddings dinámicamente
+	}
+
+	console.log("Generando vectores de logos por primera vez (runtime)...");
 	const newLogoVectors: LogoVector[] = [];
 	try {
 		const embedder = await EmbeddingPipeline.getInstance();
 		for (const logo of logoDatabase) {
 			const vector = await getEmbedding(logo.keywords, embedder);
-			newLogoVectors.push({
-				id: logo.id,
-				path: logo.path,
-				vector: vector,
-			});
+			newLogoVectors.push({ id: logo.id, path: logo.path, vector: vector });
 		}
 		cachedLogoVectors = newLogoVectors;
 		console.log("Vectores de logos cacheados.");
