@@ -76,6 +76,7 @@ export default function HomePage() {
 				onNewTeamNameChange={teamManagement.setNewTeamName}
 				onEditTeam={teamManagement.handleEditTeam}
 				onSaveTeamName={teamManagement.handleSaveTeamName}
+				onDeleteTeam={teamManagement.handleDeleteTeam}
 				isAssigningLogo={teamManagement.isAssigningLogo}
 			/>
 

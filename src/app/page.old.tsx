@@ -289,9 +289,9 @@ export default function HomePage() {
 	const formatReason = (reason: "goal" | "timeout" | "tiebreaker") =>
 		reason === "goal" ? "Gol" : reason === "timeout" ? "Timeout" : "Desempate";
 
-	const handleAddTeam = () => {
+	const handleAddTeam = async () => {
 		if (teamName.trim()) {
-			addTeam(teamName.trim());
+			await addTeam(teamName.trim());
 			setTeamName("");
 		}
 	};

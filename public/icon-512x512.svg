@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fondo del balón -->
+  <circle cx="256" cy="256" r="240" fill="#FFFFFF"/>
+  
+  <!-- Patrón del balón de fútbol -->
+  <g fill="#000000">
+    <!-- Pentágono central superior -->
+    <path d="M 256,100 L 296,140 L 280,200 L 232,200 L 216,140 Z"/>
+    
+    <!-- Hexágonos alrededor del pentágono central -->
+    <path d="M 256,100 L 216,140 L 180,120 L 190,70 L 240,80 Z"/>
+    <path d="M 296,140 L 336,120 L 376,140 L 368,200 L 320,220 L 280,200 Z"/>
+    <path d="M 232,200 L 192,220 L 140,200 L 136,140 L 180,120 L 216,140 Z"/>
+    <path d="M 280,200 L 320,220 L 320,280 L 280,300 L 232,280 Z"/>
+    <path d="M 232,280 L 192,300 L 160,340 L 180,390 L 240,380 L 280,300 Z"/>
+    <path d="M 280,300 L 320,320 L 350,360 L 340,410 L 290,420 L 240,380 Z"/>
+    
+    <!-- Pentágonos adicionales en la parte inferior -->
+    <path d="M 140,200 L 100,220 L 80,270 L 100,310 L 150,300 L 192,220 Z"/>
+    <path d="M 368,200 L 408,220 L 428,270 L 408,310 L 358,300 L 320,220 Z"/>
+  </g>
+  
+  <!-- Borde del balón -->
+  <circle cx="256" cy="256" r="240" fill="none" stroke="#333333" stroke-width="8"/>
+</svg>

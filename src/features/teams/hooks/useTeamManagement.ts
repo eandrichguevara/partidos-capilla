@@ -13,6 +13,7 @@ export const useTeamManagement = () => {
 	const teams = useGameStore((state) => state.teams);
 	const addTeam = useGameStore((state) => state.addTeam);
 	const editTeamName = useGameStore((state) => state.editTeamName);
+	const deleteTeam = useGameStore((state) => state.deleteTeam);
 
 	const handleAddTeam = async () => {
 		if (teamName.trim()) {
@@ -31,12 +32,12 @@ export const useTeamManagement = () => {
 					logoPath = result.path;
 				}
 
-				// Agregar equipo con el logo asignado
-				addTeam(teamName.trim(), logoPath);
+				// Agregar equipo con el logo asignado (ahora extrae el color del logo)
+				await addTeam(teamName.trim(), logoPath);
 			} catch (error) {
 				// Si falla la API, agregar sin logo
 				console.error("Error al asignar logo:", error);
-				addTeam(teamName.trim());
+				await addTeam(teamName.trim());
 			} finally {
 				setIsAssigningLogo(false);
 				setTeamName("");
@@ -57,6 +58,21 @@ export const useTeamManagement = () => {
 		}
 	};
 
+	const handleDeleteTeam = (teamId: number) => {
+		if (
+			confirm(
+				"¿Estás seguro de que deseas eliminar este equipo? Se eliminarán también todos sus partidos."
+			)
+		) {
+			deleteTeam(teamId);
+			// Si estábamos editando este equipo, cancelar la edición
+			if (editingTeam?.id === teamId) {
+				setEditingTeam(null);
+				setNewTeamName("");
+			}
+		}
+	};
+
 	return {
 		teams,
 		teamName,
@@ -67,6 +83,7 @@ export const useTeamManagement = () => {
 		handleAddTeam,
 		handleEditTeam,
 		handleSaveTeamName,
+		handleDeleteTeam,
 		isAssigningLogo,
 	};
 };

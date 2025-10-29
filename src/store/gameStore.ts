@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { Team, MatchResult } from "@/domain/types";
-import { pickContrastingColor } from "@/domain/colors";
+import { pickContrastingColor, extractDominantColor } from "@/domain/colors";
 import { calculateLeaderboard } from "@/domain/leaderboard";
 import { deriveTournamentState } from "@/domain/tournament/stateDerivator";
 import { getRandomFont } from "@/domain/fonts";
@@ -25,8 +25,10 @@ interface GameState {
 	timeLeft: number;
 	isTimerRunning: boolean;
 	setMatchDuration: (duration: number) => void;
-	addTeam: (name: string, logo?: string) => void;
+	addTeam: (name: string, logo?: string) => Promise<void>;
 	editTeamName: (id: number, newName: string) => void;
+	deleteTeam: (id: number) => void;
+	updateTeamColor: (id: number, color: string) => void;
 	endMatch: (winnerId: number, reason: "goal" | "timeout") => void;
 	startTimer: () => void;
 	pauseTimer: () => void;
@@ -77,23 +79,36 @@ export const useGameStore = create<GameState>()(
 					isTimerRunning: false,
 				})),
 
-			addTeam: (name, logo) => {
-				set((state) => {
-					const color = pickContrastingColor(
-						state.teams.map((team) => team.color)
-					);
-					const selectedFont = getRandomFont();
-					const newTeam: Team = {
-						id: teamIdCounter++,
-						name,
-						color,
-						logo,
-						font: selectedFont.id,
-					};
-					return {
-						teams: [...state.teams, newTeam],
-					};
-				});
+			addTeam: async (name, logo) => {
+				const state = get();
+				let color = pickContrastingColor(state.teams.map((team) => team.color));
+
+				// Si hay logo, intentar extraer el color dominante
+				if (logo && typeof window !== "undefined") {
+					try {
+						const extractedColor = await extractDominantColor(logo);
+						color = extractedColor;
+					} catch (error) {
+						console.warn(
+							"No se pudo extraer el color del logo, usando color contrastante",
+							error
+						);
+						// Continuar con el color contrastante por defecto
+					}
+				}
+
+				const selectedFont = getRandomFont();
+				const newTeam: Team = {
+					id: teamIdCounter++,
+					name,
+					color,
+					logo,
+					font: selectedFont.id,
+				};
+
+				set((state) => ({
+					teams: [...state.teams, newTeam],
+				}));
 			},
 
 			editTeamName: (id, newName) => {
@@ -101,6 +116,24 @@ export const useGameStore = create<GameState>()(
 					team.id === id ? { ...team, name: newName } : team;
 				set((state) => ({
 					teams: state.teams.map(update),
+				}));
+			},
+
+			deleteTeam: (id) => {
+				set((state) => ({
+					teams: state.teams.filter((team) => team.id !== id),
+					// Eliminar también los partidos donde participó el equipo
+					matchHistory: state.matchHistory.filter(
+						(match) => match.winnerId !== id && match.loserId !== id
+					),
+				}));
+			},
+
+			updateTeamColor: (id, color) => {
+				set((state) => ({
+					teams: state.teams.map((team) =>
+						team.id === id ? { ...team, color } : team
+					),
 				}));
 			},
 

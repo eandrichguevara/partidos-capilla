@@ -14,6 +14,7 @@ interface TeamManagementCardProps {
 	onNewTeamNameChange: (name: string) => void;
 	onEditTeam: (team: Team) => void;
 	onSaveTeamName: () => void;
+	onDeleteTeam: (teamId: number) => void;
 	isAssigningLogo?: boolean;
 }
 
@@ -27,6 +28,7 @@ export const TeamManagementCard = ({
 	onNewTeamNameChange,
 	onEditTeam,
 	onSaveTeamName,
+	onDeleteTeam,
 	isAssigningLogo = false,
 }: TeamManagementCardProps) => {
 	const [isOpen, setIsOpen] = useState(false);
@@ -104,7 +106,7 @@ export const TeamManagementCard = ({
 										<span>{team.name}</span>
 									)}
 								</div>
-								<div>
+								<div className="flex gap-2">
 									{editingTeam?.id === team.id ? (
 										<button
 											type="button"
@@ -114,13 +116,22 @@ export const TeamManagementCard = ({
 											Guardar
 										</button>
 									) : (
-										<button
-											type="button"
-											onClick={() => onEditTeam(team)}
-											className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-2 rounded"
-										>
-											Editar
-										</button>
+										<>
+											<button
+												type="button"
+												onClick={() => onEditTeam(team)}
+												className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-2 rounded"
+											>
+												Editar
+											</button>
+											<button
+												type="button"
+												onClick={() => onDeleteTeam(team.id)}
+												className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded"
+											>
+												Eliminar
+											</button>
+										</>
 									)}
 								</div>
 							</li>
