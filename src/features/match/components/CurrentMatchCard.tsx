@@ -18,31 +18,39 @@ interface CurrentMatchCardProps {
 
 /**
  * Calcula el tamaño de fuente dinámico basado en la longitud del nombre
- * Rango: 1-16 caracteres
- * Ajuste granular: un tamaño diferente para cada longitud
+ * Usa clamp() para que el texto se ajuste fluidamente al espacio disponible
  */
-const getDynamicFontSize = (name: string): string => {
+const getDynamicFontSize = (name: string): { fontSize: string } => {
 	const length = name.length;
-	// Tamaños específicos para cada longitud (móvil / escritorio)
-	const sizeMap: Record<number, string> = {
-		1: "text-6xl sm:text-7xl",
-		2: "text-5xl sm:text-6xl",
-		3: "text-5xl sm:text-6xl",
-		4: "text-4xl sm:text-5xl",
-		5: "text-4xl sm:text-5xl",
-		6: "text-4xl sm:text-5xl",
-		7: "text-3xl sm:text-4xl",
-		8: "text-3xl sm:text-4xl",
-		9: "text-3xl sm:text-4xl",
-		10: "text-2xl sm:text-3xl",
-		11: "text-2xl sm:text-3xl",
-		12: "text-2xl sm:text-3xl",
-		13: "text-xl sm:text-2xl",
-		14: "text-xl sm:text-2xl",
-		15: "text-xl sm:text-2xl",
-		16: "text-xl sm:text-2xl",
+
+	// Calculamos un tamaño base que decrece con la longitud
+	// Fórmula: tamaño máximo - (longitud * factor de reducción)
+	let minSize: number;
+	let maxSize: number;
+
+	if (length <= 5) {
+		minSize = 2.5; // 2.5rem
+		maxSize = 4; // 4rem
+	} else if (length <= 8) {
+		minSize = 2;
+		maxSize = 3.5;
+	} else if (length <= 12) {
+		minSize = 1.5;
+		maxSize = 2.5;
+	} else if (length <= 16) {
+		minSize = 1.25;
+		maxSize = 2;
+	} else {
+		// Para nombres muy largos
+		minSize = 1;
+		maxSize = 1.5;
+	}
+
+	// clamp(min, preferred, max) - el texto se ajustará entre min y max
+	// Usamos vw (viewport width) para que sea responsive
+	return {
+		fontSize: `clamp(${minSize}rem, ${maxSize * 0.8}vw, ${maxSize}rem)`,
 	};
-	return sizeMap[length] || "text-2xl sm:text-3xl";
 };
 
 export const CurrentMatchCard = ({
@@ -87,14 +95,13 @@ export const CurrentMatchCard = ({
 							className="absolute top-0 left-0 flex flex-col items-start max-w-[45%] animate-[slideInLeft_0.6s_ease-out]"
 						>
 							<div
-								className={`relative ${getDynamicFontSize(
-									currentMatch.team1.name
-								)} font-black tracking-wider transform transition-all duration-300 hover:scale-105 break-words max-w-full ${
+								className={`relative font-black tracking-wider transform transition-all duration-300 hover:scale-105 whitespace-nowrap ${
 									defendingTeam?.id === currentMatch.team1.id
 										? "animate-pulse"
 										: ""
 								}`}
 								style={{
+									...getDynamicFontSize(currentMatch.team1.name),
 									color: currentMatch.team1.color,
 									textShadow: `0 0 20px ${currentMatch.team1.color}80, 0 0 40px ${currentMatch.team1.color}40, 2px 2px 4px rgba(0,0,0,0.8)`,
 									WebkitTextStroke: "1px rgba(0,0,0,0.5)",
@@ -107,7 +114,7 @@ export const CurrentMatchCard = ({
 						{/* VS Central */}
 						<div className="flex flex-col items-center justify-center z-10">
 							<span
-								className="text-2xl sm:text-3xl font-black tracking-widest"
+								className="text-2xl sm:text-3xl font-black tracking-widest whitespace-nowrap"
 								style={{
 									color: "#fbbf24",
 									textShadow:
@@ -125,14 +132,13 @@ export const CurrentMatchCard = ({
 							className="absolute bottom-0 right-0 flex flex-col items-end max-w-[45%] animate-[slideInRight_0.6s_ease-out]"
 						>
 							<div
-								className={`relative ${getDynamicFontSize(
-									currentMatch.team2.name
-								)} font-black tracking-wider transform transition-all duration-300 hover:scale-105 break-words max-w-full ${
+								className={`relative font-black tracking-wider transform transition-all duration-300 hover:scale-105 whitespace-nowrap ${
 									defendingTeam?.id === currentMatch.team2.id
 										? "animate-pulse"
 										: ""
 								}`}
 								style={{
+									...getDynamicFontSize(currentMatch.team2.name),
 									color: currentMatch.team2.color,
 									textShadow: `0 0 20px ${currentMatch.team2.color}80, 0 0 40px ${currentMatch.team2.color}40, 2px 2px 4px rgba(0,0,0,0.8)`,
 									WebkitTextStroke: "1px rgba(0,0,0,0.5)",
