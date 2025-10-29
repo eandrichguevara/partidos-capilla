@@ -11,14 +11,7 @@ async function main() {
 		"logoAssignment",
 		"logoDatabase.json"
 	);
-	const outPath = path.join(
-		root,
-		"src",
-		"app",
-		"api",
-		"logoAssignment",
-		"logo_vectors.json"
-	);
+	const outPath = path.join(root, "public", "logo_vectors.json");
 
 	const dbRaw = await fs.readFile(dbPath, "utf8");
 	const logos = JSON.parse(dbRaw);

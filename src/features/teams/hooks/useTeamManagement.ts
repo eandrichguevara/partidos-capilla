@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useGameStore, type Team } from "@/store/gameStore";
+import { fetchLogoVectors, findTopMatches, fetchLogoDatabase, simpleKeywordMatch } from "@/lib/logoMatching";
 
 /**
  * Hook para manejar la gestión de equipos
@@ -18,26 +19,52 @@ export const useTeamManagement = () => {
 	const handleAddTeam = async () => {
 		if (teamName.trim()) {
 			setIsAssigningLogo(true);
+			const name = teamName.trim();
+			let logoPath: string | undefined;
+
+			// 1) Intentar client-side: obtener vectores y calcular embedding en el navegador
 			try {
-				// Llamar a la API para obtener el logo sugerido
-				const response = await fetch("/api/logoAssignment", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ teamName: teamName.trim() }),
-				});
+				const logos = await fetchLogoVectors();
+				// Si no hay logos, lanzar para caer al fallback
+				if (!logos || logos.length === 0) throw new Error("No logo vectors available");
 
-				let logoPath: string | undefined;
-				if (response.ok) {
-					const result = await response.json();
-					logoPath = result.path;
+				// import client embedding helper dynamically (may fail in some dev bundlers)
+				try {
+					const mod = await import("@/lib/clientEmbeddings");
+					const emb = await mod.getClientEmbedding(name);
+					const top = findTopMatches(emb, logos, 1);
+					if (top && top.length > 0 && typeof top[0].score === "number") {
+						// Usamos el match cliente si la similitud es positiva (evita usar matches inútiles)
+						if (top[0].score > 0) {
+							logoPath = top[0].path;
+						} else {
+							console.debug("Cliente: mejor match no tiene score positivo, se hará fallback a keyword match", top[0]);
+						}
+					}
+				} catch (innerErr) {
+					console.warn("No fue posible inicializar pipeline de embeddings en cliente desde handleAddTeam:", innerErr);
+					// fallthrough a keyword match below
+					throw innerErr;
 				}
+			} catch (err) {
+				console.warn("Client-side embedding/matching falló, se intentará fallback por keywords:", err);
 
-				// Agregar equipo con el logo asignado (ahora extrae el color del logo)
-				await addTeam(teamName.trim(), logoPath);
-			} catch (error) {
-				// Si falla la API, agregar sin logo
-				console.error("Error al asignar logo:", error);
-				await addTeam(teamName.trim());
+				try {
+					const db = await fetchLogoDatabase();
+					const best = simpleKeywordMatch(name, db);
+					if (best && best.path) {
+						logoPath = best.path;
+					}
+				} catch (kwErr) {
+					console.warn("Fallback por keywords también falló:", kwErr);
+				}
+			}
+
+			// Agregar equipo (puede ser con logoPath indefinido si el cliente no produjo un match)
+			try {
+				await addTeam(name, logoPath);
+			} catch (err) {
+				console.error("Error agregando equipo al store:", err);
 			} finally {
 				setIsAssigningLogo(false);
 				setTeamName("");

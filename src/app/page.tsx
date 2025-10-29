@@ -23,12 +23,10 @@ import { InfoModal, InfoButton } from "@/components/InfoModal";
 export default function HomePage() {
 	const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
-	// Precargar modelos de IA al montar el componente
+	// Precargar vectores de logos al montar el componente (full-client)
 	useEffect(() => {
-		// Llamada silenciosa para inicializar los modelos
-		fetch("/api/logoAssignment", {
-			method: "GET",
-		}).catch(() => {
+		// Intentar cargar el asset público con vectores para evitar latencia
+		fetch("/logo_vectors.json").catch(() => {
 			// Ignorar errores en la precarga
 		});
 	}, []);
