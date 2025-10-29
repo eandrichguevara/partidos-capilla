@@ -4,6 +4,7 @@ import type { Team, MatchResult } from "@/domain/types";
 import { pickContrastingColor } from "@/domain/colors";
 import { calculateLeaderboard } from "@/domain/leaderboard";
 import { deriveTournamentState } from "@/domain/tournament/stateDerivator";
+import { getRandomFont } from "@/domain/fonts";
 
 export type { Team, MatchResult } from "@/domain/types";
 
@@ -24,7 +25,7 @@ interface GameState {
 	timeLeft: number;
 	isTimerRunning: boolean;
 	setMatchDuration: (duration: number) => void;
-	addTeam: (name: string) => void;
+	addTeam: (name: string, logo?: string) => void;
 	editTeamName: (id: number, newName: string) => void;
 	endMatch: (winnerId: number, reason: "goal" | "timeout") => void;
 	startTimer: () => void;
@@ -76,12 +77,19 @@ export const useGameStore = create<GameState>()(
 					isTimerRunning: false,
 				})),
 
-			addTeam: (name) => {
+			addTeam: (name, logo) => {
 				set((state) => {
 					const color = pickContrastingColor(
 						state.teams.map((team) => team.color)
 					);
-					const newTeam: Team = { id: teamIdCounter++, name, color };
+					const selectedFont = getRandomFont();
+					const newTeam: Team = {
+						id: teamIdCounter++,
+						name,
+						color,
+						logo,
+						font: selectedFont.id,
+					};
 					return {
 						teams: [...state.teams, newTeam],
 					};

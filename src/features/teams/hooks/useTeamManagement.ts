@@ -8,15 +8,39 @@ export const useTeamManagement = () => {
 	const [teamName, setTeamName] = useState("");
 	const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 	const [newTeamName, setNewTeamName] = useState("");
+	const [isAssigningLogo, setIsAssigningLogo] = useState(false);
 
 	const teams = useGameStore((state) => state.teams);
 	const addTeam = useGameStore((state) => state.addTeam);
 	const editTeamName = useGameStore((state) => state.editTeamName);
 
-	const handleAddTeam = () => {
+	const handleAddTeam = async () => {
 		if (teamName.trim()) {
-			addTeam(teamName.trim());
-			setTeamName("");
+			setIsAssigningLogo(true);
+			try {
+				// Llamar a la API para obtener el logo sugerido
+				const response = await fetch("/api/logoAssignment", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ teamName: teamName.trim() }),
+				});
+
+				let logoPath: string | undefined;
+				if (response.ok) {
+					const result = await response.json();
+					logoPath = result.path;
+				}
+
+				// Agregar equipo con el logo asignado
+				addTeam(teamName.trim(), logoPath);
+			} catch (error) {
+				// Si falla la API, agregar sin logo
+				console.error("Error al asignar logo:", error);
+				addTeam(teamName.trim());
+			} finally {
+				setIsAssigningLogo(false);
+				setTeamName("");
+			}
 		}
 	};
 
@@ -43,5 +67,6 @@ export const useTeamManagement = () => {
 		handleAddTeam,
 		handleEditTeam,
 		handleSaveTeamName,
+		isAssigningLogo,
 	};
 };

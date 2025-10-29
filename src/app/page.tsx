@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // Features
 import { CurrentMatchCard, useCurrentMatch } from "@/features/match";
@@ -22,6 +22,16 @@ import { InfoModal, InfoButton } from "@/components/InfoModal";
 
 export default function HomePage() {
 	const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+
+	// Precargar modelos de IA al montar el componente
+	useEffect(() => {
+		// Llamada silenciosa para inicializar los modelos
+		fetch("/api/logoAssignment", {
+			method: "GET",
+		}).catch(() => {
+			// Ignorar errores en la precarga
+		});
+	}, []);
 
 	// Hooks de features
 	const matchData = useCurrentMatch();
@@ -66,6 +76,7 @@ export default function HomePage() {
 				onNewTeamNameChange={teamManagement.setNewTeamName}
 				onEditTeam={teamManagement.handleEditTeam}
 				onSaveTeamName={teamManagement.handleSaveTeamName}
+				isAssigningLogo={teamManagement.isAssigningLogo}
 			/>
 
 			{/* Settings */}

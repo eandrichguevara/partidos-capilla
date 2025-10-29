@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import type { Team } from "@/domain/types";
 
 interface TeamManagementCardProps {
@@ -13,6 +14,7 @@ interface TeamManagementCardProps {
 	onNewTeamNameChange: (name: string) => void;
 	onEditTeam: (team: Team) => void;
 	onSaveTeamName: () => void;
+	isAssigningLogo?: boolean;
 }
 
 export const TeamManagementCard = ({
@@ -25,6 +27,7 @@ export const TeamManagementCard = ({
 	onNewTeamNameChange,
 	onEditTeam,
 	onSaveTeamName,
+	isAssigningLogo = false,
 }: TeamManagementCardProps) => {
 	const [isOpen, setIsOpen] = useState(false);
 
@@ -50,12 +53,14 @@ export const TeamManagementCard = ({
 							placeholder="Nombre del equipo"
 							maxLength={16}
 							className="bg-gray-700 text-white p-2 rounded-l-md grow"
+							disabled={isAssigningLogo}
 						/>
 						<button
 							onClick={onAddTeam}
-							className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-r-md"
+							disabled={isAssigningLogo}
+							className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-r-md disabled:opacity-50 disabled:cursor-not-allowed"
 						>
-							Agregar
+							{isAssigningLogo ? "Asignando..." : "Agregar"}
 						</button>
 					</div>
 					<ul className="space-y-2">
@@ -65,11 +70,28 @@ export const TeamManagementCard = ({
 								className="flex items-center justify-between rounded-md bg-gray-700 p-2"
 							>
 								<div className="flex items-center gap-3">
-									<span
-										className="inline-flex h-3 w-3 rounded-full border border-white/40"
-										style={{ backgroundColor: team.color }}
-										aria-hidden
-									/>
+									{team.logo ? (
+										<div
+											style={{
+												filter:
+													"drop-shadow(0 0 1px white) drop-shadow(0 0 1px white)",
+											}}
+										>
+											<Image
+												src={team.logo}
+												alt={`Logo de ${team.name}`}
+												width={32}
+												height={32}
+												className="h-8 w-8 rounded-full object-cover border border-white/40"
+											/>
+										</div>
+									) : (
+										<span
+											className="inline-flex h-8 w-8 rounded-full border border-white/40"
+											style={{ backgroundColor: team.color }}
+											aria-hidden
+										/>
+									)}
 									{editingTeam?.id === team.id ? (
 										<input
 											type="text"

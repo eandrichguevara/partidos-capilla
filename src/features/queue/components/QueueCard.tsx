@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import type { Team } from "@/domain/types";
+import { getFontById } from "@/domain/fonts";
 
 interface QueueCardProps {
 	queue: Team[];
@@ -66,12 +68,27 @@ export const QueueCard = ({ queue }: QueueCardProps) => {
 										className={`flex items-center gap-3 ${
 											rank === 1 ? "text-xl font-semibold" : "text-lg"
 										}`}
+										style={{
+											fontFamily: team.font
+												? getFontById(team.font)?.fontFamily
+												: undefined,
+										}}
 									>
-										<span
-											className="inline-flex h-3.5 w-3.5 rounded-full border border-white/40"
-											style={{ backgroundColor: team.color }}
-											aria-hidden
-										/>
+										{team.logo ? (
+											<Image
+												src={team.logo}
+												alt={`Logo de ${team.name}`}
+												width={28}
+												height={28}
+												className="h-7 w-7 rounded-full object-cover border border-white/40"
+											/>
+										) : (
+											<span
+												className="inline-flex h-3.5 w-3.5 rounded-full border border-white/40"
+												style={{ backgroundColor: team.color }}
+												aria-hidden
+											/>
+										)}
 										<span>{team.name}</span>
 									</span>
 									{index < 3 ? (

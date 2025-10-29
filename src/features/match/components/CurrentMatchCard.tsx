@@ -3,6 +3,8 @@
 import { FaPause, FaPlay, FaStop, FaFutbol } from "react-icons/fa";
 import Timer from "@/components/Timer";
 import type { Team } from "@/domain/types";
+import { getFontById } from "@/domain/fonts";
+import Image from "next/image";
 
 interface CurrentMatchCardProps {
 	currentMatch: { team1: Team; team2: Team } | null;
@@ -17,39 +19,52 @@ interface CurrentMatchCardProps {
 }
 
 /**
- * Calcula el tamaño de fuente dinámico basado en la longitud del nombre
- * Usa clamp() para que el texto se ajuste fluidamente al espacio disponible
+ * Calcula el tamaño de fuente para que el texto siempre ocupe aproximadamente 220px de ancho.
+ * Estima el ancho del texto basándose en la cantidad de caracteres y ajusta el tamaño en consecuencia.
  */
-const getDynamicFontSize = (name: string): { fontSize: string } => {
+const getDynamicFontSize = (
+	name: string,
+	fontFamily?: string
+): { fontSize: string; width: string; display: string } => {
 	const length = name.length;
 
-	// Calculamos un tamaño base que decrece con la longitud
-	// Fórmula: tamaño máximo - (longitud * factor de reducción)
-	let minSize: number;
-	let maxSize: number;
+	// Estimación aproximada: caracteres anchos promedio por fuente
+	// Las fuentes condensadas tienen un ratio más alto (más caracteres por pixel)
+	// Las fuentes anchas tienen un ratio más bajo (menos caracteres por pixel)
+	const condensedFonts = [
+		"Bebas Neue",
+		"Teko",
+		"Oswald",
+		"Saira Condensed",
+		"Barlow Condensed",
+		"Staatliches",
+	];
 
-	if (length <= 5) {
-		minSize = 2.5; // 2.5rem
-		maxSize = 4; // 4rem
-	} else if (length <= 8) {
-		minSize = 2;
-		maxSize = 3.5;
-	} else if (length <= 12) {
-		minSize = 1.5;
-		maxSize = 2.5;
-	} else if (length <= 16) {
-		minSize = 1.25;
-		maxSize = 2;
-	} else {
-		// Para nombres muy largos
-		minSize = 1;
-		maxSize = 1.5;
+	let charWidthRatio = 0.6; // Ratio por defecto (caracteres moderadamente anchos)
+
+	if (fontFamily) {
+		const isCondensed = condensedFonts.some((font) =>
+			fontFamily.includes(font)
+		);
+		charWidthRatio = isCondensed ? 0.5 : 0.65; // Fuentes condensadas caben más caracteres
 	}
 
-	// clamp(min, preferred, max) - el texto se ajustará entre min y max
-	// Usamos vw (viewport width) para que sea responsive
+	// Ancho objetivo en píxeles
+	const targetWidth = 220;
+
+	// Calculamos el tamaño de fuente necesario para alcanzar el ancho objetivo
+	// fontSize = targetWidth / (length * charWidthRatio)
+	const calculatedSize = targetWidth / (length * charWidthRatio);
+
+	// Limitamos el tamaño entre 1rem (16px) y 4rem (64px) para evitar extremos
+	const minSize = 16; // px
+	const maxSize = 64; // px
+	const finalSize = Math.max(minSize, Math.min(maxSize, calculatedSize));
+
 	return {
-		fontSize: `clamp(${minSize}rem, ${maxSize * 0.8}vw, ${maxSize}rem)`,
+		fontSize: `${finalSize}px`,
+		width: `${targetWidth}px`,
+		display: "inline-block",
 	};
 };
 
@@ -81,73 +96,133 @@ export const CurrentMatchCard = ({
 				Partido Actual
 			</h2>
 			<div className="flex flex-col items-center">
-				{/* Versus estilo juego de pelea */}
-				<div className="relative w-full mb-6 py-8 px-4 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-xl border-2 border-yellow-500/50 shadow-2xl overflow-visible">
-					{/* Efectos de fondo */}
-					<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-yellow-500/10 via-transparent to-transparent pointer-events-none rounded-xl"></div>
-					<div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent animate-pulse pointer-events-none"></div>
-					<div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent animate-pulse pointer-events-none"></div>
+				{/* Madden NFL Style Match Display */}
+				<div className="relative w-full mb-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl shadow-2xl border-2 border-slate-700 py-8 px-4">
+					{/* Background pattern */}
+					<div className="absolute inset-0 opacity-10">
+						<div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.1)_25%,rgba(255,255,255,0.1)_50%,transparent_50%,transparent_75%,rgba(255,255,255,0.1)_75%,rgba(255,255,255,0.1))] bg-[length:20px_20px]"></div>
+					</div>
 
-					<div className="relative flex flex-col items-center justify-center min-h-[160px] pointer-events-none">
-						{/* Equipo 1 - Arriba Izquierda */}
+					{/* Top accent bar */}
+					<div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent"></div>
+
+					<div className="relative flex flex-col items-center justify-center min-h-[240px]">
+						{/* Team 1 - Top Left */}
 						<div
-							key={currentMatch.team1.id}
-							className="absolute top-0 left-0 flex flex-col items-start max-w-[45%] animate-[slideInLeft_0.6s_ease-out]"
+							key={`team1-${currentMatch.team1.id}`}
+							className="absolute top-0 left-0 flex items-center gap-2 animate-[maddenSlideInLeft_0.8s_ease-out]"
 						>
-							<div
-								className={`relative font-black tracking-wider transform transition-all duration-300 hover:scale-105 whitespace-nowrap ${
-									defendingTeam?.id === currentMatch.team1.id
-										? "animate-pulse"
-										: ""
-								}`}
-								style={{
-									...getDynamicFontSize(currentMatch.team1.name),
-									color: currentMatch.team1.color,
-									textShadow: `0 0 20px ${currentMatch.team1.color}80, 0 0 40px ${currentMatch.team1.color}40, 2px 2px 4px rgba(0,0,0,0.8)`,
-									WebkitTextStroke: "1px rgba(0,0,0,0.5)",
-								}}
-							>
-								{currentMatch.team1.name}
+							{/* Logo que sale del contenedor */}
+							{currentMatch.team1.logo && (
+								<div className="relative w-32 h-32 sm:w-40 sm:h-40 -ml-8 -mt-8">
+									<div
+										className="absolute inset-0 transition-all duration-300"
+										style={{
+											filter:
+												defendingTeam?.id === currentMatch.team1.id
+													? "drop-shadow(0 0 2px white) drop-shadow(0 0 2px white) drop-shadow(0 0 30px rgba(250,204,21,0.6))"
+													: "drop-shadow(0 0 2px white) drop-shadow(0 0 2px white)",
+										}}
+									>
+										<Image
+											src={currentMatch.team1.logo}
+											alt={currentMatch.team1.name}
+											fill
+											className="object-contain"
+											priority
+										/>
+									</div>
+								</div>
+							)}
+
+							{/* Team Name */}
+							<div className="ml-0">
+								<h3
+									className="font-black tracking-tight"
+									style={{
+										...getDynamicFontSize(
+											currentMatch.team1.name,
+											currentMatch.team1.font
+												? getFontById(currentMatch.team1.font)?.fontFamily
+												: undefined
+										),
+										color: currentMatch.team1.color,
+										textShadow: `0 2px 10px ${currentMatch.team1.color}60, 0 0 20px ${currentMatch.team1.color}40, 2px 2px 4px rgba(0,0,0,0.8)`,
+										WebkitTextStroke: "1px rgba(0,0,0,0.5)",
+										fontFamily: currentMatch.team1.font
+											? getFontById(currentMatch.team1.font)?.fontFamily
+											: undefined,
+										textAlign: "center",
+									}}
+								>
+									{currentMatch.team1.name}
+								</h3>
 							</div>
 						</div>
 
 						{/* VS Central */}
 						<div className="flex flex-col items-center justify-center z-10">
-							<span
-								className="text-2xl sm:text-3xl font-black tracking-widest whitespace-nowrap"
-								style={{
-									color: "#fbbf24",
-									textShadow:
-										"0 0 20px rgba(251, 191, 36, 0.6), 2px 2px 4px rgba(0,0,0,0.8)",
-									WebkitTextStroke: "1px rgba(0,0,0,0.5)",
-								}}
-							>
+							<span className="text-4xl font-black text-emerald-400 tracking-widest drop-shadow-[0_2px_10px_rgba(52,211,153,0.5)]">
 								VS
 							</span>
 						</div>
 
-						{/* Equipo 2 - Abajo Derecha */}
+						{/* Team 2 - Bottom Right */}
 						<div
-							key={currentMatch.team2.id}
-							className="absolute bottom-0 right-0 flex flex-col items-end max-w-[45%] animate-[slideInRight_0.6s_ease-out]"
+							key={`team2-${currentMatch.team2.id}`}
+							className="absolute bottom-0 right-0 flex items-center gap-2 justify-end animate-[maddenSlideInRight_0.8s_ease-out]"
 						>
-							<div
-								className={`relative font-black tracking-wider transform transition-all duration-300 hover:scale-105 whitespace-nowrap ${
-									defendingTeam?.id === currentMatch.team2.id
-										? "animate-pulse"
-										: ""
-								}`}
-								style={{
-									...getDynamicFontSize(currentMatch.team2.name),
-									color: currentMatch.team2.color,
-									textShadow: `0 0 20px ${currentMatch.team2.color}80, 0 0 40px ${currentMatch.team2.color}40, 2px 2px 4px rgba(0,0,0,0.8)`,
-									WebkitTextStroke: "1px rgba(0,0,0,0.5)",
-								}}
-							>
-								{currentMatch.team2.name}
+							{/* Team Name */}
+							<div className="mr-0 text-right">
+								<h3
+									className="font-black tracking-tight"
+									style={{
+										...getDynamicFontSize(
+											currentMatch.team2.name,
+											currentMatch.team2.font
+												? getFontById(currentMatch.team2.font)?.fontFamily
+												: undefined
+										),
+										color: currentMatch.team2.color,
+										textShadow: `0 2px 10px ${currentMatch.team2.color}60, 0 0 20px ${currentMatch.team2.color}40, 2px 2px 4px rgba(0,0,0,0.8)`,
+										WebkitTextStroke: "1px rgba(0,0,0,0.5)",
+										fontFamily: currentMatch.team2.font
+											? getFontById(currentMatch.team2.font)?.fontFamily
+											: undefined,
+										textAlign: "center",
+									}}
+								>
+									{currentMatch.team2.name}
+								</h3>
 							</div>
+
+							{/* Logo que sale del contenedor */}
+							{currentMatch.team2.logo && (
+								<div className="relative w-32 h-32 sm:w-40 sm:h-40 -mr-8 -mb-8">
+									<div
+										className="absolute inset-0 transition-all duration-300"
+										style={{
+											filter:
+												defendingTeam?.id === currentMatch.team2.id
+													? "drop-shadow(0 0 2px white) drop-shadow(0 0 2px white) drop-shadow(0 0 30px rgba(250,204,21,0.6))"
+													: "drop-shadow(0 0 2px white) drop-shadow(0 0 2px white)",
+										}}
+									>
+										<Image
+											src={currentMatch.team2.logo}
+											alt={currentMatch.team2.name}
+											fill
+											className="object-contain"
+											priority
+										/>
+									</div>
+								</div>
+							)}
 						</div>
 					</div>
+
+					{/* Bottom accent bar */}
+					<div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent"></div>
 				</div>
 				<Timer />
 				<div className="mt-4 flex w-full justify-around gap-3">

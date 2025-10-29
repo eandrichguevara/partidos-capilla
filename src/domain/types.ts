@@ -2,6 +2,8 @@ export interface Team {
 	id: number;
 	name: string;
 	color: string;
+	logo?: string; // Ruta del logo asignado automáticamente
+	font?: string; // ID de la fuente asignada (ej: "bebas-neue")
 }
 
 export interface MatchResult {

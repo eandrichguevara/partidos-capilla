@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import {
 	FaUsers,
 	FaListOl,
@@ -11,6 +12,7 @@ import {
 } from "react-icons/fa";
 import type { IconType } from "react-icons";
 import type { LeaderboardEntry } from "@/domain/types";
+import { getFontById } from "@/domain/fonts";
 
 interface HeaderIconProps {
 	icon: IconType;
@@ -118,12 +120,30 @@ export const LeaderboardCard = ({ leaderboard }: LeaderboardCardProps) => {
 							<tr key={entry.team.id}>
 								<td className="py-2 pr-2 font-semibold">
 									<span className="flex items-center gap-2">
+										{entry.team.logo ? (
+											<Image
+												src={entry.team.logo}
+												alt={`Logo de ${entry.team.name}`}
+												width={20}
+												height={20}
+												className="h-5 w-5 rounded-full object-cover border border-white/40"
+											/>
+										) : (
+											<span
+												className="inline-flex h-2.5 w-2.5 rounded-full border border-white/40"
+												style={{ backgroundColor: entry.team.color }}
+												aria-hidden
+											/>
+										)}
 										<span
-											className="inline-flex h-2.5 w-2.5 rounded-full border border-white/40"
-											style={{ backgroundColor: entry.team.color }}
-											aria-hidden
-										/>
-										<span>{entry.team.name}</span>
+											style={{
+												fontFamily: entry.team.font
+													? getFontById(entry.team.font)?.fontFamily
+													: undefined,
+											}}
+										>
+											{entry.team.name}
+										</span>
 									</span>
 								</td>
 								<td className="py-2 text-right">{entry.gamesPlayed}</td>
