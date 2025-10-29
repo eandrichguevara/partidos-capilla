@@ -2,22 +2,34 @@
 
 import { useState } from "react";
 import { getClientEmbedding } from "@/lib/clientEmbeddings";
+import {
+	fetchLogoVectors,
+	findTopMatches,
+	MatchResult,
+} from "@/lib/logoMatching";
 
 export default function ClientEmbedDemo() {
 	const [text, setText] = useState("Universidad Católica");
 	const [embedding, setEmbedding] = useState<number[] | null>(null);
+	const [matches, setMatches] = useState<MatchResult[] | null>(null);
 	const [loading, setLoading] = useState(false);
 
 	async function handleGenerate() {
 		setLoading(true);
 		try {
+			// 1) fetch precomputed logo vectors
+			const logos = await fetchLogoVectors();
+			// 2) compute embedding in browser (WASM)
 			const emb = await getClientEmbedding(text);
 			setEmbedding(emb);
+			// 3) compute top matches
+			const top = findTopMatches(emb, logos, 4);
+			setMatches(top);
 		} catch (err) {
 			console.error(err);
 			const message =
 				err && typeof err === "object" && "message" in err
-					? (err as any).message
+					? (err as { message?: string }).message ?? String(err)
 					: String(err);
 			alert("Error generando embedding: " + message);
 		} finally {
@@ -55,6 +67,32 @@ export default function ClientEmbedDemo() {
 					</pre>
 					<div className="text-xs text-gray-600 mt-2">
 						Longitud: {embedding.length}
+					</div>
+				</div>
+			)}
+
+			{matches && (
+				<div className="mt-4">
+					<div className="text-sm font-medium mb-2">Top matches</div>
+					<div className="grid grid-cols-2 gap-3">
+						{matches.map((m) => (
+							<div
+								key={m.id}
+								className="flex items-center gap-2 p-2 border rounded"
+							>
+								<img
+									src={m.path}
+									alt={m.id}
+									className="w-12 h-12 object-contain"
+								/>
+								<div>
+									<div className="text-sm font-semibold">{m.id}</div>
+									<div className="text-xs text-gray-600">
+										Score: {m.score.toFixed(4)}
+									</div>
+								</div>
+							</div>
+						))}
 					</div>
 				</div>
 			)}
