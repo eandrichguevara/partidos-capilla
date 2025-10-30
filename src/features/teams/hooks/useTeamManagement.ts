@@ -22,11 +22,7 @@ export const useTeamManagement = () => {
 	const deleteTeam = useGameStore((state) => state.deleteTeam);
 
 	const handleAddTeam = async () => {
-		console.log("Cliente: intentando agregar equipo:", teamName);
 		if (teamName.trim()) {
-			console.log(
-				"Cliente: nombre de equipo válido, procediendo con la asignación de logo"
-			);
 			setIsAssigningLogo(true);
 			const name = teamName.trim();
 			let logoPath: string | undefined;
@@ -34,16 +30,13 @@ export const useTeamManagement = () => {
 			// 1) Intentar client-side: obtener vectores y calcular embedding en el navegador
 			try {
 				const logos = await fetchLogoVectors();
-				console.log("Cliente: logos obtenidos:", logos);
 				// Si no hay logos, lanzar para caer al fallback
 				if (!logos || logos.length === 0)
 					throw new Error("No logo vectors available");
 
 				// import client embedding helper dynamically (may fail in some dev bundlers)
 				try {
-					console.log("Cliente: intentando obtener embedding para:", name);
 					const mod = await import("@/lib/clientEmbeddings");
-					console.log("Cliente: módulo de embeddings cargado:", mod);
 
 					// Wrap embedding initialization in a timeout so the UI doesn't hang
 					// if the library or model download gets stuck. If it times out or fails,
@@ -65,16 +58,13 @@ export const useTeamManagement = () => {
 						// Re-throw para que el catch exterior capture y use el fallback por keywords
 						throw embErr;
 					}
-					console.log("Cliente: embedding obtenido:", emb);
+
 					// pedir los top 3 para poder desempatar mejor
 					const tops = findTopMatches(emb, logos, 3);
-					console.log("Cliente: mejores matches por embedding:", tops);
 					const top1 = tops[0];
 
-					console.log("Cliente: mejores matches por embedding:", tops);
-					console.log("Cliente: mejor match por embedding:", top1);
 					if (top1 && typeof top1.score === "number") {
-						console.log(
+						console.debug(
 							"Cliente: Entramos en la regla ajustada para el mejor match por embedding"
 						);
 						// Regla ajustada: si el mejor match por embeddings tiene score > 0,

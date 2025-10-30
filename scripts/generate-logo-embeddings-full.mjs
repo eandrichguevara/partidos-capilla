@@ -16,9 +16,6 @@ async function main() {
 	const dbRaw = await fs.readFile(dbPath, "utf8");
 	const logos = JSON.parse(dbRaw);
 
-	console.log(
-		`Cargando @xenova/transformers y creando pipeline (no quantizado)...`
-	);
 	const { pipeline } = await import("@xenova/transformers");
 	const embedder = await pipeline(
 		"feature-extraction",
@@ -28,7 +25,6 @@ async function main() {
 
 	const results = [];
 	for (const logo of logos) {
-		console.log(`Procesando: ${logo.id}`);
 		const out = await embedder(logo.keywords, {
 			pooling: "mean",
 			normalize: true,
@@ -38,9 +34,6 @@ async function main() {
 	}
 
 	await fs.writeFile(outPath, JSON.stringify(results), "utf8");
-	console.log(
-		`Embeddings (no quantizados) generados y guardados en: ${outPath}`
-	);
 }
 
 main().catch((err) => {

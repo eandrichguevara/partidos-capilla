@@ -39,7 +39,6 @@ function topMatches(embedding, logos, topN = 5) {
 }
 
 async function getEmbedding(text) {
-	console.log("Inicializando pipeline @xenova/transformers...");
 	const { pipeline } = await import("@xenova/transformers");
 	const pipe = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", {
 		quantized: true,
@@ -52,16 +51,15 @@ async function run(names) {
 	const logos = await loadLogoVectors();
 	const db = await loadLogoDatabase();
 	for (const name of names) {
-		console.log("\n=== Diagnóstico para:", name, "===");
 		try {
 			const emb = await getEmbedding(name);
 			const tops = topMatches(emb, logos, 8);
 			tops.forEach((t, i) => {
-				console.log(`${i + 1}. ${t.id} — score: ${t.score}`);
+				console.debug(`${i + 1}. ${t.id} — score: ${t.score}`);
 			});
 			// también calcular matching por keywords (simpleKeywordMatch)
 			const kw = simpleKeywordMatch(name, db);
-			console.log("Keyword best:", kw);
+			console.debug("Keyword best:", kw);
 		} catch (err) {
 			console.error("Error generando embedding para:", name, err);
 		}
