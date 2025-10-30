@@ -22,7 +22,11 @@ export const useTeamManagement = () => {
 	const deleteTeam = useGameStore((state) => state.deleteTeam);
 
 	const handleAddTeam = async () => {
+		console.log("Cliente: intentando agregar equipo:", teamName);
 		if (teamName.trim()) {
+			console.log(
+				"Cliente: nombre de equipo válido, procediendo con la asignación de logo"
+			);
 			setIsAssigningLogo(true);
 			const name = teamName.trim();
 			let logoPath: string | undefined;
@@ -30,24 +34,88 @@ export const useTeamManagement = () => {
 			// 1) Intentar client-side: obtener vectores y calcular embedding en el navegador
 			try {
 				const logos = await fetchLogoVectors();
+				console.log("Cliente: logos obtenidos:", logos);
 				// Si no hay logos, lanzar para caer al fallback
 				if (!logos || logos.length === 0)
 					throw new Error("No logo vectors available");
 
 				// import client embedding helper dynamically (may fail in some dev bundlers)
 				try {
+					console.log("Cliente: intentando obtener embedding para:", name);
 					const mod = await import("@/lib/clientEmbeddings");
-					const emb = await mod.getClientEmbedding(name);
-					const top = findTopMatches(emb, logos, 1);
-					if (top && top.length > 0 && typeof top[0].score === "number") {
-						// Usamos el match cliente si la similitud es positiva (evita usar matches inútiles)
-						if (top[0].score > 0) {
-							logoPath = top[0].path;
+					console.log("Cliente: módulo de embeddings cargado:", mod);
+
+					// Wrap embedding initialization in a timeout so the UI doesn't hang
+					// if the library or model download gets stuck. If it times out or fails,
+					// we fallthrough to the keyword fallback handled by the outer catch.
+					const timeoutMs = 5000;
+					let emb: number[];
+					try {
+						emb = (await Promise.race([
+							mod.getClientEmbedding(name),
+							new Promise((_res, rej) =>
+								setTimeout(() => rej(new Error("embedding timeout")), timeoutMs)
+							),
+						])) as number[];
+					} catch (embErr) {
+						console.warn(
+							"Cliente: getClientEmbedding falló o expiró (se usará fallback de keywords):",
+							embErr
+						);
+						// Re-throw para que el catch exterior capture y use el fallback por keywords
+						throw embErr;
+					}
+					console.log("Cliente: embedding obtenido:", emb);
+					// pedir los top 3 para poder desempatar mejor
+					const tops = findTopMatches(emb, logos, 3);
+					console.log("Cliente: mejores matches por embedding:", tops);
+					const top1 = tops[0];
+
+					console.log("Cliente: mejores matches por embedding:", tops);
+					console.log("Cliente: mejor match por embedding:", top1);
+					if (top1 && typeof top1.score === "number") {
+						console.log(
+							"Cliente: Entramos en la regla ajustada para el mejor match por embedding"
+						);
+						// Regla ajustada: si el mejor match por embeddings tiene score > 0,
+						// lo consideramos concluyente y lo usamos.
+						if (top1.score > 0) {
+							console.debug(
+								"Cliente: aceptando match por embedding (score > 0)",
+								top1
+							);
+							logoPath = top1.path;
 						} else {
 							console.debug(
-								"Cliente: mejor match no tiene score positivo, se hará fallback a keyword match",
-								top[0]
+								"Cliente: embedding no positivo, intentando fallback por keywords",
+								tops
 							);
+							try {
+								const db = await fetchLogoDatabase();
+								const bestKw = simpleKeywordMatch(name, db);
+								// Usar el mejor por keywords sólo si tiene coincidencia real (score >= 1)
+								if (
+									bestKw &&
+									bestKw.path &&
+									typeof bestKw.score === "number" &&
+									bestKw.score >= 1
+								) {
+									console.debug(
+										"Cliente: usando keyword match como desempate (embedding <= 0)",
+										bestKw
+									);
+									logoPath = bestKw.path;
+								} else {
+									console.debug(
+										"Cliente: embedding no concluyente y keywords no decisivas"
+									);
+								}
+							} catch (kwErr) {
+								console.warn(
+									"Fallback por keywords falló durante decision híbrida:",
+									kwErr
+								);
+							}
 						}
 					}
 				} catch (innerErr) {
@@ -67,8 +135,19 @@ export const useTeamManagement = () => {
 				try {
 					const db = await fetchLogoDatabase();
 					const best = simpleKeywordMatch(name, db);
-					if (best && best.path) {
+					// Asignar el mejor por keywords sólo si tiene coincidencia real (score >= 1)
+					if (
+						best &&
+						best.path &&
+						typeof best.score === "number" &&
+						best.score >= 1
+					) {
 						logoPath = best.path;
+					} else {
+						console.debug(
+							"Fallback por keywords no determinante, no se asignará logo automáticamente",
+							best
+						);
 					}
 				} catch (kwErr) {
 					console.warn("Fallback por keywords también falló:", kwErr);
