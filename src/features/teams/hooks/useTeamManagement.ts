@@ -60,7 +60,22 @@ export const useTeamManagement = () => {
 					}
 
 					// pedir los top 3 para poder desempatar mejor
-					const tops = findTopMatches(emb, logos, 3);
+					// Intentar cargar la base de datos para que findTopMatches pueda aplicar
+					// exclusions y negativeKeywords (si falla, seguimos sin ella)
+					let dbForMatching;
+					try {
+						dbForMatching = await fetchLogoDatabase();
+					} catch (dbErr) {
+						console.warn(
+							"No se pudo cargar logo database para aplicar exclusions/negativeKeywords:",
+							dbErr
+						);
+					}
+
+					const tops = findTopMatches(emb, logos, 3, {
+						teamName: name,
+						database: dbForMatching,
+					});
 					const top1 = tops[0];
 
 					if (top1 && typeof top1.score === "number") {
