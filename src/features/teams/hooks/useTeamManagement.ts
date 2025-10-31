@@ -44,8 +44,14 @@ export const useTeamManagement = () => {
 					const timeoutMs = 5000;
 					let emb: number[];
 					try {
+						// Preprocess team name to strip definite/indefinite articles
+						const preprocessedName =
+							typeof mod.removeDefiniteArticles === "function"
+								? mod.removeDefiniteArticles(name)
+								: name;
+
 						emb = (await Promise.race([
-							mod.getClientEmbedding(name),
+							mod.getClientEmbedding(preprocessedName),
 							new Promise((_res, rej) =>
 								setTimeout(() => rej(new Error("embedding timeout")), timeoutMs)
 							),

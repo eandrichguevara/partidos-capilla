@@ -95,3 +95,40 @@ export async function getClientEmbedding(text: string): Promise<number[]> {
 		throw err;
 	}
 }
+
+// Remove definite/indefinite articles from a team name to avoid them affecting embeddings.
+export function removeDefiniteArticles(text: string) {
+	if (!text || typeof text !== "string") return text;
+
+	// Articles in Spanish and English (lowercased, no diacritics)
+	const articles = new Set([
+		"el",
+		"la",
+		"los",
+		"las",
+		"lo",
+		"un",
+		"una",
+		"unos",
+		"unas",
+		"al",
+		"del",
+		"the",
+		"a",
+		"an",
+	]);
+
+	const normalize = (s: string) =>
+		s
+			.toLowerCase()
+			.normalize("NFD")
+			.replace(/\p{Diacritic}/gu, "");
+
+	// Split on non-word characters, keep tokens that are not articles
+	const tokens = text.split(/[^A-Za-z0-9À-ÿ]+/).filter(Boolean);
+	const filtered = tokens.filter((t) => !articles.has(normalize(t)));
+
+	// Return a cleaned string; if everything was removed, return original trimmed
+	if (filtered.length === 0) return text.trim();
+	return filtered.join(" ");
+}
