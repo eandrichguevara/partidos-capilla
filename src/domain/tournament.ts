@@ -1,4 +1,4 @@
-import type { LeaderboardEntry } from "./types";
+import type { LeaderboardEntry, MatchResult } from "./types";
 
 /**
  * Obtiene el campeón del torneo (primer lugar en el leaderboard)
@@ -57,4 +57,16 @@ export const detectTieForFirst = (
 	}
 
 	return { isTied: false };
+};
+
+/**
+ * Obtiene el total de victorias por gol de todos los partidos
+ */
+export const getTotalWinsByGoal = (matchHistory: MatchResult[]): number => {
+	return matchHistory.reduce((acc, match) => {
+		if (match.reason === "goal") {
+			acc = acc + 1;
+		}
+		return acc;
+	}, 0);
 };

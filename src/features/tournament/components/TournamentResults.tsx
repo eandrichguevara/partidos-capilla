@@ -1,9 +1,25 @@
 "use client";
 
-import { FaTrophy, FaMedal, FaAward, FaFutbol, FaClock } from "react-icons/fa";
+import {
+	FaTrophy,
+	FaMedal,
+	FaAward,
+	FaFutbol,
+	FaClock,
+	FaTeamspeak,
+	FaCalendar,
+	FaCalendarAlt,
+	FaRegCalendarAlt,
+	FaRegCalendarMinus,
+} from "react-icons/fa";
 import type { LeaderboardEntry } from "@/domain/types";
 import Image from "next/image";
 import { getFontById } from "@/domain/fonts";
+import {
+	FaPeopleGroup,
+	FaRegCalendarDays,
+	FaRegCalendarXmark,
+} from "react-icons/fa6";
 
 // Copiado de CurrentMatchCard
 const getDynamicFontSize = (
@@ -43,12 +59,16 @@ interface TournamentResultsProps {
 	champion: LeaderboardEntry;
 	podium: LeaderboardEntry[];
 	totalMatches?: number;
+	totalWinsByGoal?: number;
+	totalTeams?: number;
 }
 
 export const TournamentResults = ({
 	champion,
 	podium,
 	totalMatches,
+	totalWinsByGoal,
+	totalTeams,
 }: TournamentResultsProps) => {
 	const now = new Date();
 	const dateStr = now.toLocaleDateString("es-ES", {
@@ -388,7 +408,7 @@ export const TournamentResults = ({
 							boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
 						}}
 					>
-						<FaFutbol className="text-2xl text-emerald-300 mx-auto mb-1" />
+						<FaRegCalendarXmark className="text-2xl text-emerald-300 mx-auto mb-1" />
 						<p
 							className="text-2xl font-black text-white leading-tight"
 							style={{
@@ -409,17 +429,17 @@ export const TournamentResults = ({
 							boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
 						}}
 					>
-						<FaClock className="text-2xl text-amber-300 mx-auto mb-1" />
+						<FaFutbol className="text-2xl text-amber-300 mx-auto mb-1" />
 						<p
 							className="text-2xl font-black text-white leading-tight"
 							style={{
 								textShadow: "0 0 10px rgba(245, 158, 11, 0.8)",
 							}}
 						>
-							{champion.winsByTimeout}
+							{totalWinsByGoal}
 						</p>
 						<p className="text-xs text-amber-200 uppercase font-bold tracking-wider">
-							Timeouts
+							Goles
 						</p>
 					</div>
 					<div
@@ -430,17 +450,17 @@ export const TournamentResults = ({
 							boxShadow: "0 4px 12px rgba(194, 65, 12, 0.3)",
 						}}
 					>
-						<FaTrophy className="text-2xl text-orange-300 mx-auto mb-1" />
+						<FaPeopleGroup className="text-2xl text-orange-300 mx-auto mb-1" />
 						<p
 							className="text-2xl font-black text-white leading-tight"
 							style={{
 								textShadow: "0 0 10px rgba(194, 65, 12, 0.8)",
 							}}
 						>
-							{champion.winsByGoal}
+							{totalTeams}
 						</p>
 						<p className="text-xs text-orange-200 uppercase font-bold tracking-wider">
-							Victorias
+							Equipos
 						</p>
 					</div>
 				</div>

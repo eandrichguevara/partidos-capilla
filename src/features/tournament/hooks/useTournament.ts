@@ -5,6 +5,7 @@ import {
 	getPodium,
 	isValidTournament,
 	detectTieForFirst,
+	getTotalWinsByGoal,
 } from "@/domain/tournament";
 import type { LeaderboardEntry } from "@/domain/types";
 
@@ -21,6 +22,7 @@ export const useTournament = () => {
 	const champion = getTournamentWinner(leaderboard);
 	const podium = getPodium(leaderboard);
 	const canFinish = isValidTournament(matchHistory.length);
+	const totalWinsByGoal = getTotalWinsByGoal(matchHistory);
 
 	const handleOpenResults = () => {
 		if (!canFinish) {
@@ -145,6 +147,7 @@ export const useTournament = () => {
 		tiedTeams,
 		champion,
 		podium,
+		totalWinsByGoal,
 		canFinish,
 		handleOpenResults,
 		handleCloseResults,

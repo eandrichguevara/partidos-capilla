@@ -139,6 +139,8 @@ export default function HomePage() {
 							champion={tournament.champion}
 							podium={tournament.podium}
 							totalMatches={history.orderedHistory.length}
+							totalWinsByGoal={tournament.totalWinsByGoal}
+							totalTeams={teamManagement.teams.length}
 						/>
 						<div className="mt-4 px-8 flex flex-col gap-3 w-full">
 							<button
