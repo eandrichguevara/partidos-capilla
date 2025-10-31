@@ -3,14 +3,7 @@ import path from "path";
 
 async function main() {
 	const root = process.cwd();
-	const dbPath = path.join(
-		root,
-		"src",
-		"app",
-		"api",
-		"logoAssignment",
-		"logoDatabase.json"
-	);
+	const dbPath = path.join(root, "public", "logo_database.json");
 	const outPath = path.join(root, "public", "logo_vectors.json");
 
 	const dbRaw = await fs.readFile(dbPath, "utf8");

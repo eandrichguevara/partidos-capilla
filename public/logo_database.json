@@ -47,7 +47,7 @@
 		"id": "anillos_enredado",
 		"path": "/escudos/anillos, enredado, verde amarillo.png",
 		"keywords": "anillos, enredado, verde, amarillo, enlazado, unión, conexión",
-		"negativeKeywords": "leones"
+		"negativeKeywords": "leones, brillante"
 	},
 	{
 		"id": "arbol_naturaleza",
@@ -57,7 +57,7 @@
 	{
 		"id": "aurora_boreal",
 		"path": "/escudos/aurora boreal, verde, planta.png",
-		"keywords": "aurora, boreal, verde, planta, luz, norte, mágico, natural"
+		"keywords": "aurora, boreal, verde, planta, luz, norte, mágico, natural, brillo, brillante, polo"
 	},
 	{
 		"id": "buho",
@@ -154,13 +154,13 @@
 		"id": "escudo_dorado",
 		"path": "/escudos/escudo, proteccion, dorado, brillo.png",
 		"keywords": "escudo, protección, dorado, brillo, defensa, oro, seguridad",
-		"negativeKeywords": "soles"
+		"negativeKeywords": "soles, brillantes"
 	},
 	{
 		"id": "estrella_fugaz",
 		"path": "/escudos/estrella, fugaz, amarillo, fuego.png",
 		"keywords": "estrella, fugaz, amarillo, fuego, deseo, velocidad, brillante",
-		"negativeKeywords": "olas, mar"
+		"negativeKeywords": "olas, mar, brillantes"
 	},
 	{
 		"id": "fantasma",
