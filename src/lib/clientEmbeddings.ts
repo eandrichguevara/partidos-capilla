@@ -4,9 +4,40 @@
 // This file will be bundled only for client code (use from a React client component).
 
 let clientPipeline: unknown = null;
+let isInitializing = false;
+let initializationError: Error | null = null;
 
 export async function getClientPipeline(): Promise<unknown> {
 	if (clientPipeline) return clientPipeline;
+
+	if (initializationError) {
+		throw initializationError;
+	}
+
+	// Prevent multiple simultaneous initialization attempts
+	if (isInitializing) {
+		// Wait for the other initialization to complete
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		return getClientPipeline();
+	}
+
+	// Check if we're in a browser environment
+	if (typeof window === "undefined") {
+		const error = new Error(
+			"getClientPipeline can only be called in a browser environment"
+		);
+		initializationError = error;
+		throw error;
+	}
+
+	// Check for required browser APIs
+	if (!window.SharedArrayBuffer) {
+		console.warn(
+			"clientEmbeddings: SharedArrayBuffer is not available. This may be due to missing CORS headers."
+		);
+	}
+
+	isInitializing = true;
 
 	// Dynamic import so it only loads in the browser
 	console.debug(
@@ -17,6 +48,7 @@ export async function getClientPipeline(): Promise<unknown> {
 		mod = await import("@xenova/transformers");
 	} catch (impErr) {
 		console.error("clientEmbeddings: dynamic import failed:", impErr);
+		isInitializing = false;
 
 		// Heurístico: si el error viene de prebundling/entorno (dev server) o de
 		// evaluación anticipada, dar una sugerencia al desarrollador para ajustar
@@ -43,7 +75,11 @@ export async function getClientPipeline(): Promise<unknown> {
 			// ignore heuristic errors
 		}
 
-		throw new Error("Failed to import @xenova/transformers: " + String(impErr));
+		const error = new Error(
+			"Failed to import @xenova/transformers: " + String(impErr)
+		);
+		initializationError = error;
+		throw error;
 	}
 
 	// Basic sanity checks: ensure the imported module exposes a pipeline creator
@@ -73,14 +109,18 @@ export async function getClientPipeline(): Promise<unknown> {
 		);
 
 		clientPipeline = pipe;
+		isInitializing = false;
 		console.debug("clientEmbeddings: pipeline ready");
 		return clientPipeline;
 	} catch (pipeErr) {
 		console.error("clientEmbeddings: pipeline initialization failed:", pipeErr);
+		isInitializing = false;
 		// Re-throw a clearer error for upstream handling
-		throw new Error(
+		const error = new Error(
 			"Failed to initialize transformers pipeline: " + String(pipeErr)
 		);
+		initializationError = error;
+		throw error;
 	}
 }
 

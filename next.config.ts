@@ -6,7 +6,37 @@ import type { NextConfig } from "next";
 // loaded dynamically from client code at runtime.
 const nextConfig: NextConfig = {
 	// Configure server-side component externals for both webpack and Turbopack
-	serverExternalPackages: ["@xenova/transformers"],
+	serverExternalPackages: ["@xenova/transformers", "onnxruntime-node"],
+
+	// Experimental: exclude from static analysis
+	experimental: {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		optimizePackageImports: [] as any,
+		serverComponentsExternalPackages: [
+			"@xenova/transformers",
+			"onnxruntime-node",
+			"sharp",
+		],
+	},
+
+	// Required headers for @xenova/transformers (WASM and SharedArrayBuffer support)
+	async headers() {
+		return [
+			{
+				source: "/(.*)",
+				headers: [
+					{
+						key: "Cross-Origin-Embedder-Policy",
+						value: "credentialless",
+					},
+					{
+						key: "Cross-Origin-Opener-Policy",
+						value: "same-origin",
+					},
+				],
+			},
+		];
+	},
 
 	// When running under newer Next versions Turbopack may be enabled by
 	// default. Adding an explicit empty `turbopack` config silences the
@@ -21,12 +51,31 @@ const nextConfig: NextConfig = {
 			// versions it may be a function; guard accordingly.
 			if (Array.isArray(config.externals)) {
 				config.externals.push("@xenova/transformers");
+				config.externals.push("onnxruntime-node");
 			} else if (!config.externals) {
-				config.externals = ["@xenova/transformers"];
+				config.externals = ["@xenova/transformers", "onnxruntime-node"];
 			} else {
 				// If externals is a function (rare), we skip modifying it — the
 				// dynamic import and our client-only usage should be enough.
 			}
+		}
+
+		// Needed for @xenova/transformers WASM support
+		config.experiments = {
+			...config.experiments,
+			asyncWebAssembly: true,
+			layers: true,
+		};
+
+		// Ignore node-specific modules in client bundle
+		if (!isServer) {
+			config.resolve = config.resolve || {};
+			config.resolve.fallback = {
+				...config.resolve.fallback,
+				fs: false,
+				path: false,
+				crypto: false,
+			};
 		}
 
 		return config;
