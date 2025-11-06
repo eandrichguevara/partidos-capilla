@@ -5,6 +5,9 @@ import type { NextConfig } from "next";
 // if pre-evaluated). We mark it external for server builds so it's only
 // loaded dynamically from client code at runtime.
 const nextConfig: NextConfig = {
+	// Configure server-side component externals for both webpack and Turbopack
+	serverExternalPackages: ["@xenova/transformers"],
+
 	// When running under newer Next versions Turbopack may be enabled by
 	// default. Adding an explicit empty `turbopack` config silences the
 	// warning about having a webpack config while Turbopack is active.

@@ -1,3 +1,5 @@
+"use client";
+
 // Client-side embeddings helper using @xenova/transformers in the browser.
 // This file will be bundled only for client code (use from a React client component).
 
