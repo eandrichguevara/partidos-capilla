@@ -309,7 +309,8 @@
 	{
 		"id": "tigre_naranja",
 		"path": "/escudos/tigre, rayado, naranja, determinacion.png",
-		"keywords": "tigre, rayado, naranja, determinación, felino, rayas, feroz, jungla"
+		"keywords": "tigre, rayado, naranja, determinación, felino, rayas, feroz, jungla",
+		"negativeKeywords": "rayo, chargers"
 	},
 	{
 		"id": "titan",

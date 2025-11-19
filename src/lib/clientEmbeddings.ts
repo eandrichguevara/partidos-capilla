@@ -142,8 +142,8 @@ export async function getClientEmbedding(text: string): Promise<number[]> {
 export function removeDefiniteArticles(text: string) {
 	if (!text || typeof text !== "string") return text;
 
-	// Articles in Spanish and English (lowercased, no diacritics)
-	const articles = new Set([
+	// Omitted words in Spanish and English (lowercased, no diacritics)
+	const omittedWords = new Set([
 		"el",
 		"la",
 		"los",
@@ -158,6 +158,7 @@ export function removeDefiniteArticles(text: string) {
 		"the",
 		"a",
 		"an",
+		"FC",
 	]);
 
 	const normalize = (s: string) =>
@@ -168,7 +169,7 @@ export function removeDefiniteArticles(text: string) {
 
 	// Split on non-word characters, keep tokens that are not articles
 	const tokens = text.split(/[^A-Za-z0-9À-ÿ]+/).filter(Boolean);
-	const filtered = tokens.filter((t) => !articles.has(normalize(t)));
+	const filtered = tokens.filter((t) => !omittedWords.has(normalize(t)));
 
 	// Return a cleaned string; if everything was removed, return original trimmed
 	if (filtered.length === 0) return text.trim();
