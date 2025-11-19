@@ -247,7 +247,7 @@ export const useGameStore = create<GameState>()(
 		}),
 		{
 			name: "partidos-capilla-game-store",
-			version: 1,
+			version: 2,
 			storage: createJSONStorage(() =>
 				typeof window === "undefined" ? noopStorage : window.localStorage
 			),
@@ -264,15 +264,49 @@ export const useGameStore = create<GameState>()(
 						matchDuration: DEFAULT_MATCH_DURATION,
 					};
 				}
+
+				let state = persistedState as PersistedGameState;
+
 				if (version < 1) {
 					const legacyState = persistedState as Partial<PersistedGameState>;
-					return {
+					state = {
 						teams: legacyState.teams ?? [],
 						matchHistory: legacyState.matchHistory ?? [],
 						matchDuration: legacyState.matchDuration ?? DEFAULT_MATCH_DURATION,
 					};
 				}
-				return persistedState as PersistedGameState;
+
+				if (version < 2) {
+					// Migrate logo paths to new URL-safe format
+					state = {
+						...state,
+						teams: state.teams.map((team) => {
+							if (!team.logo) return team;
+							
+							// Extract filename from path (e.g. "/escudos/File Name.png")
+							const parts = team.logo.split('/');
+							const filename = parts.pop();
+							if (!filename) return team;
+							
+							const prefix = parts.join('/');
+							
+							// Sanitize filename: lowercase, replace spaces/commas with underscore
+							const newFilename = filename
+								.toLowerCase()
+								.replace(/, /g, '_')
+								.replace(/,/g, '_')
+								.replace(/ /g, '_')
+								.replace(/_+/g, '_');
+								
+							return {
+								...team,
+								logo: `${prefix}/${newFilename}`
+							};
+						}),
+					};
+				}
+
+				return state;
 			},
 			onRehydrateStorage: () => (state, error) => {
 				if (error) {
