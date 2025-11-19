@@ -43,6 +43,13 @@ export async function getClientPipeline(): Promise<unknown> {
 	console.debug(
 		"clientEmbeddings: starting dynamic import of @xenova/transformers"
 	);
+
+	// Polyfill process.env for @xenova/transformers if missing
+	if (typeof window !== "undefined" && !window.process) {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(window as any).process = { env: {} };
+	}
+
 	let mod: unknown;
 	try {
 		mod = await import("@xenova/transformers");
