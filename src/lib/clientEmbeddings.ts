@@ -12,9 +12,9 @@ let transformersModule: unknown = null;
 async function loadTransformersFromCDN(): Promise<unknown> {
 	if (transformersModule) return transformersModule;
 
-	// 🐴 ponytail: import dinámico desde CDN, el bundler no lo toca
-	const mod = await import(
-		/* webpackIgnore: true */ "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"
+	// 🐴 ponytail: eval evita que TypeScript/Turbopack intenten resolver el módulo
+	const mod = await eval(
+		'import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2")'
 	);
 	transformersModule = mod;
 	return mod;
