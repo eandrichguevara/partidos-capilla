@@ -1,11 +1,24 @@
 "use client";
 
-// Client-side embeddings helper using @xenova/transformers in the browser.
-// This file will be bundled only for client code (use from a React client component).
+// 🐴 ponytail: cargar desde CDN evita todo el drama de bundling con Next.js/Turbopack
+// El paquete @xenova/transformers tiene problemas conocidos con Object.keys(process.env)
+// en entornos donde process no existe como se espera. CDN = cero problemas.
 
 let clientPipeline: unknown = null;
 let isInitializing = false;
 let initializationError: Error | null = null;
+let transformersModule: unknown = null;
+
+async function loadTransformersFromCDN(): Promise<unknown> {
+	if (transformersModule) return transformersModule;
+
+	// 🐴 ponytail: import dinámico desde CDN, el bundler no lo toca
+	const mod = await import(
+		/* webpackIgnore: true */ "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"
+	);
+	transformersModule = mod;
+	return mod;
+}
 
 export async function getClientPipeline(): Promise<unknown> {
 	if (clientPipeline) return clientPipeline;
@@ -14,14 +27,11 @@ export async function getClientPipeline(): Promise<unknown> {
 		throw initializationError;
 	}
 
-	// Prevent multiple simultaneous initialization attempts
 	if (isInitializing) {
-		// Wait for the other initialization to complete
 		await new Promise((resolve) => setTimeout(resolve, 100));
 		return getClientPipeline();
 	}
 
-	// Check if we're in a browser environment
 	if (typeof window === "undefined") {
 		const error = new Error(
 			"getClientPipeline can only be called in a browser environment"
@@ -30,82 +40,39 @@ export async function getClientPipeline(): Promise<unknown> {
 		throw error;
 	}
 
-	// Check for required browser APIs
-	if (!window.SharedArrayBuffer) {
-		console.warn(
-			"clientEmbeddings: SharedArrayBuffer is not available. This may be due to missing CORS headers."
-		);
-	}
-
 	isInitializing = true;
-
-	// Dynamic import so it only loads in the browser
-	console.debug(
-		"clientEmbeddings: starting dynamic import of @xenova/transformers"
-	);
-
-	// Polyfill process.env for @xenova/transformers if missing
-	if (typeof window !== "undefined" && !window.process) {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(window as any).process = { env: {} };
-	}
 
 	let mod: unknown;
 	try {
-		mod = await import("@xenova/transformers");
-	} catch (impErr) {
-		console.error("clientEmbeddings: dynamic import failed:", impErr);
-		isInitializing = false;
-
-		// Heurístico: si el error viene de prebundling/entorno (dev server) o de
-		// evaluación anticipada, dar una sugerencia al desarrollador para ajustar
-		// la configuración del bundler (Vite/Next) — esto causa a menudo el
-		// "Cannot convert undefined or null to object" originado en paquetes
-		// que esperan un runtime distinto.
-		try {
-			const maybeErr = impErr as unknown as { message?: unknown };
-			const msg = String(maybeErr?.message ?? impErr);
-			if (
-				msg.includes("Cannot convert undefined or null to object") ||
-				msg.includes("isEmpty") ||
-				msg.includes("dev-base") ||
-				msg.includes("instantiateModule")
-			) {
-				console.warn(
-					"clientEmbeddings: parece un error de pre-bundling/SSR del dev server. " +
-						"Si usas Vite, añade `optimizeDeps: { exclude: ['@xenova/transformers'] }` " +
-						"y `ssr: { noExternal: ['@xenova/transformers'] }` en tu vite.config. " +
-						"En Next.js/webpack evita que el paquete sea evaluado en el servidor (marcar como external)."
-				);
-			}
-		} catch {
-			// ignore heuristic errors
+		mod = await loadTransformersFromCDN();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const env = (mod as any).env;
+		if (env) {
+			env.allowLocalModels = false;
+			env.useBrowserCache = true;
 		}
-
+	} catch (impErr) {
+		console.error("clientEmbeddings: CDN load failed:", impErr);
+		isInitializing = false;
 		const error = new Error(
-			"Failed to import @xenova/transformers: " + String(impErr)
+			"Failed to load @xenova/transformers from CDN: " + String(impErr)
 		);
 		initializationError = error;
 		throw error;
 	}
 
-	// Basic sanity checks: ensure the imported module exposes a pipeline creator
-	// (some bundlers or mocks may return undefined/defaults)
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	if (!mod || typeof (mod as any).pipeline !== "function") {
 		console.error(
-			"clientEmbeddings: @xenova/transformers import did not expose a 'pipeline' function",
+			"clientEmbeddings: module did not expose a 'pipeline' function",
 			mod
 		);
 		throw new Error(
-			"@xenova/transformers did not expose a pipeline function. Check bundler/mocks/CSP and network access."
+			"@xenova/transformers did not expose a pipeline function."
 		);
 	}
 
 	try {
-		console.debug(
-			"clientEmbeddings: creating pipeline (this may download model/WASM)..."
-		);
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const pipe = await (mod as any).pipeline(
 			"feature-extraction",
@@ -117,12 +84,10 @@ export async function getClientPipeline(): Promise<unknown> {
 
 		clientPipeline = pipe;
 		isInitializing = false;
-		console.debug("clientEmbeddings: pipeline ready");
 		return clientPipeline;
 	} catch (pipeErr) {
 		console.error("clientEmbeddings: pipeline initialization failed:", pipeErr);
 		isInitializing = false;
-		// Re-throw a clearer error for upstream handling
 		const error = new Error(
 			"Failed to initialize transformers pipeline: " + String(pipeErr)
 		);
@@ -136,8 +101,6 @@ export async function getClientEmbedding(text: string): Promise<number[]> {
 		const pipe = await getClientPipeline();
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const out = await (pipe as any)(text, { pooling: "mean", normalize: true });
-
-		// `out.data` is expected to be a TypedArray (Float32Array)
 		return Array.from(out.data as Iterable<number>);
 	} catch (err) {
 		console.error("clientEmbeddings: getClientEmbedding failed:", err);
@@ -145,11 +108,9 @@ export async function getClientEmbedding(text: string): Promise<number[]> {
 	}
 }
 
-// Remove definite/indefinite articles from a team name to avoid them affecting embeddings.
 export function removeDefiniteArticles(text: string) {
 	if (!text || typeof text !== "string") return text;
 
-	// Omitted words in Spanish and English (lowercased, no diacritics)
 	const omittedWords = new Set([
 		"el",
 		"la",
@@ -174,11 +135,9 @@ export function removeDefiniteArticles(text: string) {
 			.normalize("NFD")
 			.replace(/\p{Diacritic}/gu, "");
 
-	// Split on non-word characters, keep tokens that are not articles
 	const tokens = text.split(/[^A-Za-z0-9À-ÿ]+/).filter(Boolean);
 	const filtered = tokens.filter((t) => !omittedWords.has(normalize(t)));
 
-	// Return a cleaned string; if everything was removed, return original trimmed
 	if (filtered.length === 0) return text.trim();
 	return filtered.join(" ");
 }
